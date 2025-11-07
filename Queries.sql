@@ -387,7 +387,7 @@ f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 s.salario_liquido,
 SUM(num_dias) FILTER (WHERE estado_aprov = 'Aprovado') AS total_dias_ferias,
 
-COUNT(d.sexo) FILTER(WHERE d.sexo = 'Feminino') AS num_dep_Fem
+COUNT(d.sexo) AS num_dep_Fem
 
 FROM funcionarios AS f 
 LEFT JOIN salario AS s 
@@ -397,6 +397,7 @@ JOIN ferias as fe
   ON f.id_fun = fe.id_fun
 JOIN dependentes AS d 
   ON f.id_fun = d.id_fun 
+where d.sexo = 'Feminino'
 GROUP BY nome_completo, s.salario_liquido;
 
 
