@@ -381,12 +381,13 @@ JOIN salario as sal
 
 -------------------------------------------------------------------------------------------------------------------------------
 --21. Funcionarios auferem salário mais de 1500 euros, têm um total de férias atribuidas entre 10 e 15, com numero de dependentes do sexo feminino.
-
+set search_path TO bd054_schema, public;
 SELECT 
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 s.salario_liquido,
-SUM(calcular_num_dias_ferias(f.id_fun, fe.data_inicio, fe.data_fim)) as ferias_aprovadas,
-COUNT(d.sexo) AS num_dep_Fem
+SUM(num_dias) FILTER (WHERE estado_aprov = 'Aprovado') AS total_dias_ferias,
+
+COUNT(d.sexo) FILTER(WHERE d.sexo = 'Feminino') AS num_dep_Fem
 
 FROM funcionarios AS f 
 LEFT JOIN salario AS s 
@@ -396,7 +397,6 @@ JOIN ferias as fe
   ON f.id_fun = fe.id_fun
 JOIN dependentes AS d 
   ON f.id_fun = d.id_fun 
-WHERE  d.sexo = 'Feminino'
 GROUP BY nome_completo, s.salario_liquido;
 
 

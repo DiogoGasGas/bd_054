@@ -7,7 +7,6 @@ set search_path to bd054_schema, public;
 
 
 
-
 -- Trigger que calcula o numero o numero de dias de ferias automaticamente
 -- Tem que ser rodado antes do trigger de validar dias de ferias
 CREATE OR REPLACE FUNCTION calcular_num_dias_ferias()
@@ -34,8 +33,7 @@ FOR EACH ROW
 EXECUTE FUNCTION calcular_num_dias_ferias();
 
 
-
---- trigger para validar dias de ferias
+-- trigger para validar dias de ferias
 set search_path TO bd054_schema, public;
 CREATE OR REPLACE FUNCTION validar_dias_ferias()
 RETURNS TRIGGER AS $$
@@ -66,7 +64,7 @@ EXECUTE FUNCTION validar_dias_ferias();
 
 
 
---- trigger para calcular salario liquido
+-- trigger para calcular salario liquido
 
 CREATE OR REPLACE FUNCTION calc_salario_liquido()
 RETURNS TRIGGER AS $$
@@ -109,7 +107,7 @@ EXECUTE FUNCTION calc_salario_liquido();
 
 
 
---- trigger para registar mudanca de cargo no historico_empresas
+-- trigger para registar mudanca de cargo no historico_empresas
 
 CREATE OR REPLACE FUNCTION registrar_mudanca_cargo()
 RETURNS TRIGGER AS $$
