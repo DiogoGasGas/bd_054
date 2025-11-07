@@ -373,7 +373,6 @@ JOIN salario as sal
             ON f2.id_fun = s2.id_fun
         WHERE f2.id_depart = f.id_depart);
 
-- sahjhdhd
 -- nesta subquerry vamos filtrar os funcionários por departamento e daí calcular a média salarial por departamento
 -- para depois comparar com o salário bruto do funcionário em questão
 -- ou seja, para cada funcionário, vamos calcular a média salarial do departamento a que ele pertence
