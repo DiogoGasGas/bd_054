@@ -319,7 +319,7 @@ ORDER BY taxa_adesao DESC;
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---19.funcionarios trabalharam na empresa Marques, auferem atualmente mais de 870 euros brutos e têm seguro de saúde
+--19.funcionarios trabalharam na empresa bd054, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
 SELECT
 DISTINCT(f.primeiro_nome || ' ' || f.ultimo_nome) As nome_completo,
   -- o distinct é necessário uma vez que um funcionário pode aparecer repetido em benefícios diferentes ou empresas
@@ -330,12 +330,12 @@ FROM funcionarios AS f
 JOIN historico_empresas AS h 
     ON f.id_fun = h.id_fun
   -- associar os funcionários ao seu histórico
-    AND (h.nome_empresa = 'Marques')
+    AND (h.nome_empresa = 'bd054')
   -- filtrar apenas para a empresa Marques
 JOIN salario As s 
     ON f.id_fun = s.id_fun
   -- associar funcionários ao seu salário
-    AND s.salario_bruto > 870 
+    AND s.salario_bruto > 1500
   -- filtrar para salários superiores a 870 euros
 JOIN beneficios AS b
     ON f.id_fun = b.id_fun 
