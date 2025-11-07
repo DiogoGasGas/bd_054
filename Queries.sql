@@ -226,17 +226,21 @@ SELECT
     f.ultimo_nome,
     av.autoavaliacao
 FROM funcionarios AS f 
-JOIN avaliacoes AS av ON f.id_fun = av.id_fun
+JOIN avaliacoes AS av
+  ON f.id_fun = av.id_fun
 WHERE av.autoavaliacao IS NULL;
--- se a autoavaliacao é null, é porque não existe
-
+-- se a autoavaliacao é null, é porque não existe avaliação preenchida
 ------------------------------------------------------------------------------------
 
 --14. Numero de faltas por departamento e (justificacao mais comum (adicionar))
+
+set search_path to bd054_schema, public;
+
 SELECT 
     d.id_depart,
     d.nome,
-    COUNT(fal.id_fun) AS total_faltas -- contar as faltas dos funcionarios
+    COUNT(fal.id_fun) AS total_faltas, -- contar as faltas dos funcionarios
+    COUNT(fal.justificacao) AS total_faltas_just
 FROM departamentos d
 -- vão ser associados funcionarios aos departamentos
 LEFT JOIN funcionarios AS f 
@@ -250,36 +254,40 @@ ORDER BY total_faltas DESC;
 ---------------------------------------------
 --- 15- Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
   
+set search_path to bd054_schema, public;
+
 SELECT 
-    d.Nome,
-    COUNT(f.ID_fun) AS Numero_Funcionarios,
-    AVG(s.salario_bruto) AS Media_Salarial_Departamento
-FROM 
-    Departamentos d
-JOIN 
-    Funcionarios f ON d.ID_depart = f.ID_depart
-JOIN 
-    Remuneracoes r ON f.ID_fun = r.ID_fun
-JOIN 
-    Salario s ON r.ID_fun = s.ID_fun AND r.Data_inicio = s.Data_inicio
+    d.Nome,  -- nome do departamento
+    COUNT(DISTINCT f.ID_fun) AS Numero_Funcionarios,  -- número único de funcionários por departamento
+    AVG(s.salario_bruto) AS Media_Salarial_Departamento  -- média salarial do departamento
+FROM departamentos AS d
+JOIN funcionarios AS f 
+    ON d.ID_depart = f.ID_depart  -- associa cada funcionário ao seu departamento
+JOIN remuneracoes AS r 
+    ON f.ID_fun = r.ID_fun  -- liga o funcionário ao seu histórico de remunerações
+JOIN salario AS s 
+    ON r.ID_fun = s.ID_fun 
+   AND r.Data_inicio = s.Data_inicio  -- garante correspondência temporal entre remuneração e salário
 GROUP BY 
-    d.Nome
+    d.Nome  -- agrupamento por departamento
 HAVING 
-    AVG(s.salario_bruto) > (
+    AVG(s.salario_bruto) > (  -- mantém apenas os departamentos com média acima da média global
         SELECT AVG(salario_bruto) 
         FROM Salario
     )
 ORDER BY 
-    Media_Salarial_Departamento DESC;
+    Media_Salarial_Departamento DESC;  -- ordena departamentos da maior para a menor média salarial
 
 ---------------------------------------------
 --- 16- Funcionários que já trabalharam na mesma empresa
+
+set search_path to bd054_schema, public;
 
 SELECT 
   h.nome_empresa, 
   -- agrega os nomes completos dos funcionários que trabalharam nessa empresa
   STRING_AGG(f.primeiro_nome || ' ' || f.ultimo_nome, ', ') AS funcionarios
-FROM historico_empresas AS
+FROM historico_empresas AS h
   -- junta histórico aos funcionários
 JOIN funcionarios AS f 
   ON f.id_fun = h.id_fun
@@ -287,19 +295,25 @@ GROUP BY h.nome_empresa
   -- mantém apenas as empresas com mais de um funcionário, ou seja, onde pelo menos dois já trabalharam
 HAVING COUNT(f.id_fun) > 1;
 
+
 ------------------------------------------------------------------------------------------
 --17. Funcionários sem faltas registadas
 
-select 
-  f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
-  COUNT(fal.data) as total_faltas
-from funcionarios f
-left join faltas fal on f.id_fun = fal.id_fun
-group by f.primeiro_nome, f.ultimo_nome
-having count(fal.data) = 0
+set search_path to bd054_schema, public;
 
+SELECT 
+  f.id_fun,
+  f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+  COUNT(fal.data) AS total_faltas
+FROM funcionarios AS f
+LEFT JOIN faltas AS fal 
+  ON f.id_fun = fal.id_fun
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome
+HAVING COUNT(fal.data) = 0
+ORDER BY f.id_fun;
 ------------------------------------------------------------------------------------------
 --18. Taxa de aderência a formações por departamento
+set search_path to bd054_schema, public;
 
 SELECT 
     d.nome,
@@ -319,7 +333,10 @@ ORDER BY taxa_adesao DESC;
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---19.funcionarios trabalharam na empresa bd054, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
+--19.funcionarios trabalharam na empresa Moura, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
+
+set search_path to bd054_schema, public;
+
 SELECT
 DISTINCT(f.primeiro_nome || ' ' || f.ultimo_nome) As nome_completo,
   -- o distinct é necessário uma vez que um funcionário pode aparecer repetido em benefícios diferentes ou empresas
@@ -330,7 +347,7 @@ FROM funcionarios AS f
 JOIN historico_empresas AS h 
     ON f.id_fun = h.id_fun
   -- associar os funcionários ao seu histórico
-    AND (h.nome_empresa = 'bd054')
+    AND (h.nome_empresa = 'Moura')
   -- filtrar apenas para a empresa Marques
 JOIN salario As s 
     ON f.id_fun = s.id_fun
@@ -345,6 +362,7 @@ JOIN beneficios AS b
 
 -- 20.Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas.
 
+set search_path to bd054_schema, public;
 
 SELECT 
 f.id_fun,
@@ -382,27 +400,31 @@ JOIN salario as sal
 -------------------------------------------------------------------------------------------------------------------------------
 --21. Funcionarios auferem salário mais de 1500 euros, têm um total de férias atribuidas entre 10 e 15, com numero de dependentes do sexo feminino.
 set search_path TO bd054_schema, public;
+
+
 SELECT 
+f.id_fun,
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 s.salario_liquido,
-SUM(num_dias) FILTER (WHERE estado_aprov = 'Aprovado') AS total_dias_ferias,
-
+  -- distinct  evita multiplicacao desnecessária entre tabelas com relações n:m entre elas
+SUM(DISTINCT fe.num_dias)  as ferias_aprovadas,
 COUNT(d.sexo) AS num_dep_Fem
 
 FROM funcionarios AS f 
-LEFT JOIN salario AS s 
+JOIN salario AS s 
   ON f.id_fun = s.id_fun 
-AND s.salario_liquido > 1500
 JOIN ferias as fe 
   ON f.id_fun = fe.id_fun
 JOIN dependentes AS d 
   ON f.id_fun = d.id_fun 
-where d.sexo = 'Feminino'
-GROUP BY nome_completo, s.salario_liquido;
-
+  -- filtrar sexo feminino, salario liquido acima de 1550 euros e as férias aprovadas são as únicas contadas
+WHERE  (d.sexo = 'Feminino' AND s.salario_liquido >1500 and fe.estado_aprov = 'Aprovado')
+GROUP BY f.id_fun,nome_completo, s.salario_liquido;
 
 -------------------------------------------------------------------------------------------------------------------------------
 -- 22. Média de dependentes femininos por departamento
+
+set search_path to bd054_schema, public;
 
 SELECT 
 d.nome,
@@ -422,12 +444,13 @@ FROM (
 ) AS dep
 
 -- left joins usados para associar id_depart e nome do departamento à média, agrupando os com o group by
--- left join, não join, para garantir que mesmo departamentos sem dependentes femininos são incluídos  
+-- right join, não apenas join, para garantir que mesmo departamentos sem dependentes femininos são incluídos  
 
 LEFT JOIN funcionarios AS f 
 ON f.id_fun = dep.id_fun
-LEFT JOIN departamentos as d 
+RIGHT JOIN departamentos as d 
 ON d.id_depart = f.id_depart
 GROUP BY d.nome, f.id_depart;
+
 
 
