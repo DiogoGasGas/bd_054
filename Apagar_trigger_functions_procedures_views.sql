@@ -3,15 +3,15 @@ SET search_path TO bd054_schema, public;
 -- ==========================================================
 -- 1) TRIGGERS
 -- ==========================================================
-DROP TRIGGER IF EXISTS trg_validar_dias_ferias ON ferias;
-DROP TRIGGER IF EXISTS trg_calc_salario_liquido ON salario;
-DROP TRIGGER IF EXISTS trg_registrar_mudanca_cargo ON funcionarios;
-DROP TRIGGER IF EXISTS trg_validar_idade_funcionario ON funcionarios;
-DROP TRIGGER IF EXISTS trg_cria_utilizador ON funcionarios;
-DROP TRIGGER IF EXISTS trg_delete_permissoes ON funcionarios;
-DROP TRIGGER IF EXISTS trg_calcular_num_dias_ferias ON ferias;
-DROP TRIGGER IF EXISTS trg_validar_datas_dependentes ON dependentes;
-DROP TRIGGER IF EXISTS trg_validar_datas_remuneracoes ON remuneracoes;
+DROP TRIGGER IF EXISTS trg_validar_dias_ferias ON ferias CASCADE;
+DROP TRIGGER IF EXISTS trg_calc_salario_liquido ON salario CASCADE;
+DROP TRIGGER IF EXISTS trg_registrar_mudanca_cargo ON funcionarios CASCADE;
+DROP TRIGGER IF EXISTS trg_validar_idade_funcionario ON funcionarios CASCADE;
+DROP TRIGGER IF EXISTS trg_cria_utilizador ON funcionarios CASCADE;
+DROP TRIGGER IF EXISTS trg_delete_permissoes ON funcionarios CASCADE;
+DROP TRIGGER IF EXISTS trg_calcular_num_dias_ferias ON ferias CASCADE;
+DROP TRIGGER IF EXISTS trg_validar_datas_dependentes ON dependentes CASCADE;
+DROP TRIGGER IF EXISTS trg_validar_datas_remuneracoes ON remuneracoes CASCADE;
 
 -- ==========================================================
 -- 2) PROCEDURES
