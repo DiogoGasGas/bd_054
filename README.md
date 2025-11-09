@@ -153,7 +153,9 @@ Depois de limpar, repita os passos da [Inicialização da Base de Dados](#2-inic
 
 ## 👥 Autores
 
-Projeto desenvolvido no âmbito da disciplina de Bases de Dados - FCUL
+- Diogo Gaspar nº62145
+- João Guiomar nº62179
+- Mariana Ferreira nº62180
 
 ---
 
