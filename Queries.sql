@@ -17,54 +17,49 @@ ORDER BY total_funcionarios DESC;
 
 --2 Funcionários que ganham acima da média geral 
 SELECT
-f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
-s.salario_bruto AS salario_bruto
-FROM
-funcionarios f
-LEFT JOIN salario s ON f.ID_fun = s.ID_fun
-WHERE s.salario_bruto > (      -- Filtro 1: O salário tem de ser maior que a média global
-SELECT AVG(salario_bruto) 
-FROM salario 
-)                          -- Filtro 2: "Olha só para o registo mais recente deste funcionário"
-AND s.Data_inicio = (
-SELECT MAX(s2.Data_inicio)
-FROM salario s2
-WHERE s2.ID_fun = f.ID_fun 
-)
-ORDER BY
-salario_bruto DESC;
+  f.primeiro_nome || ' '|| f.ultimo_nome AS nome_completo,                 -- nome do funcionário
+  s.salario_bruto         -- salário bruto individual
+FROM funcionarios AS f
+LEFT JOIN salario AS s
+ON s.id_fun = f.id_fun
+-- subquery calcula a média global de salário_base na tabela Funcionarios
+WHERE s.salario_bruto > (
+  SELECT AVG(salario_bruto) 
+  FROM salario
+);
 --------------------------------------------------------------------------
+
 --3. Departamentos e as suas remunerações 
 -- Objetivo: identificar os departamentos com a maior soma de remunerações por ordem decrescente
-SELECT d.nome, SUM(s.salario_bruto) AS tot_remun 
+SELECT
+  d.nome,
+  SUM(s.salario_bruto) As tot_remun
 FROM departamentos AS d
-LEFT JOIN funcionarios AS f 
-ON d.id_depart = f.id_depart
-LEFT JOIN salario AS s 
-ON f.id_fun = s.id_fun
-WHERE s.Data_inicio = (   -- garante que só apanhamos o salário mais recente
-SELECT MAX(s2.Data_inicio)
-FROM salario s2
-WHERE s2.id_fun = f.id_fun -- para este funcionário específico
-)
+-- junta departamentos com funcionarios para obter quem trabalha em cada departamento
+JOIN funcionarios AS f 
+  ON d.id_depart = f.id_depart
+-- associa funcionarios com remuneracoes para obter os valores associados
+JOIN salario AS s 
+  ON f.id_fun = s.id_fun
+-- associar os valores por departamento
 GROUP BY d.nome
+-- ordena pela soma das remunerações de forma decrescente 
 ORDER BY tot_remun DESC;
 ------------------------------------------------------------------------------------
 
 --4. Top 3 funcionários com maior total de remuneração 
 -- Objetivo: listar os 3 funcionários com maior salário líquido de forma decrescente
-SELECT f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
-s.salario_liquido AS salario_liquido
-FROM 
-funcionarios AS f
-LEFT JOIN salario AS s ON f.id_fun = s.id_fun
-WHERE s.Data_inicio = (       --  garante que é o salário mais recente
-SELECT MAX(s2.Data_inicio)
-FROM salario s2
-WHERE s2.id_fun = f.id_fun -- para este funcionário
-  )
-ORDER BY 
-salario_liquido DESC -- Ordena pelo salário atual
+SELECT
+  f.id_fun,
+  f.primeiro_nome,                        -- nome do funcionário
+  SUM(s.salario_liquido) AS total_salario -- soma de todas as remunerações associadas ao funcionário
+FROM funcionarios AS f
+JOIN salario AS s 
+ON f.id_fun = s.id_fun
+GROUP BY f.id_fun, f.primeiro_nome
+-- ordena os resultados do maior para o menor valor total
+ORDER BY total_salario DESC
+--limita aos 3 primeiros valores a tabela
 LIMIT 3;
 -------------------------------------------------------------------------------------
 
@@ -136,7 +131,7 @@ WHERE fer.num_dias = (
 ORDER BY f.id_fun;
 --------------------------------------------------------------------------------------------
 
---9. Média de pontuação de avaliação por departamento
+--9. Média de avaliação por departamento com média salarial acima da média geral
 SELECT
   d.nome AS nome_depart,            -- nome do departamento
   COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
@@ -243,28 +238,24 @@ ORDER BY total_faltas DESC;
 ---------------------------------------------
 
 --15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
-SELECT d.Nome, COUNT(f.ID_fun) AS Numero_Funcionarios,
-AVG(s.salario_bruto) AS Media_Salarial_Departamento
+SELECT 
+    d.Nome,  -- nome do departamento
+    COUNT(DISTINCT f.ID_fun) AS Numero_Funcionarios,  -- número único de funcionários por departamento
+    AVG(s.salario_bruto) AS Media_Salarial_Departamento  -- média salarial do departamento
 FROM departamentos AS d
-LEFT JOIN funcionarios AS f 
-ON d.ID_depart = f.ID_depart
-LEFT JOIN salario AS s 
-ON f.ID_fun = s.ID_fun
-WHERE s.Data_inicio = (    -- Filtro 1: Garante que só usamos o salário mais recente de CADA funcionário
-SELECT MAX(s2.Data_inicio) 
-FROM Salario s2 
-WHERE s2.ID_fun = f.ID_fun
+JOIN funcionarios AS f 
+    ON d.ID_depart = f.ID_depart  -- associa cada funcionário ao seu departamento
+JOIN remuneracoes AS r 
+    ON f.ID_fun = r.ID_fun  -- liga o funcionário ao seu histórico de remunerações
+JOIN salario AS s 
+    ON r.ID_fun = s.ID_fun 
+   AND r.Data_inicio = s.Data_inicio  -- garante correspondência temporal entre remuneração e salário
+GROUP BY d.Nome  -- agrupamento por departamento
+HAVING AVG(s.salario_bruto) > (  -- mantém apenas os departamentos com média acima da média global
+        SELECT AVG(salario_bruto) 
+        FROM Salario
 )
-GROUP BY d.Nome
-HAVING AVG(s.salario_bruto) > (    -- Filtro 2: Compara a média do departamento
-SELECT AVG(s_avg.salario_bruto) -- Subquery para a Média Global dos salários atuais
-FROM Salario s_avg
-WHERE s_avg.Data_inicio = (
-SELECT MAX(s_max.Data_inicio)
-FROM Salario s_max
-WHERE s_max.ID_fun = s_avg.ID_fun )
-)
-ORDER BY Media_Salarial_Departamento DESC;
+ORDER BY Media_Salarial_Departamento DESC;  -- ordena departamentos da maior para a menor média salarial
 ---------------------------------------------
 
 --16. Funcionários que já trabalharam na mesma empresa
@@ -334,36 +325,33 @@ JOIN beneficios AS b
   ON f.id_fun = b.id_fun 
   AND b.tipo = 'Seguro Saúde';
 -- definir benefício pretendido
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
-SELECT f.id_fun, f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
-sal.salario_bruto AS salario_atual,
-d.nome AS nome_departamento,
-(SELECT COUNT(*) -- subquery para contar formações 
-FROM teve_formacao AS teve
-WHERE teve.id_fun = f.id_fun
-  ) AS num_formacoes
+SELECT 
+f.id_fun,
+f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+sal.salario_bruto,
+d.nome,
+-- subquery para obter o número de formações por funcionários
+(SELECT COUNT(*)
+ FROM teve_formacao AS teve
+ -- associar funcionários às formações a que foram
+ JOIN formacoes AS fo
+ ON teve.id_for = fo.id_for
+ AND (f.id_fun = teve.id_fun)
+) As num_formacoes
 FROM funcionarios AS f 
-LEFT JOIN departamentos AS d ON f.id_depart = d.id_depart
-LEFT JOIN salario AS sal ON f.id_fun = sal.id_fun
-WHERE sal.Data_inicio = (   -- Garante que só vemos o salário mais recente do funcionário
-SELECT MAX(s_main.Data_inicio)
-FROM salario s_main
-WHERE s_main.id_fun = f.id_fun
-    )
-AND sal.salario_bruto > ( -- Compara esse salário com a MÉDIA ATUAL do departamento
-SELECT AVG(s2.salario_bruto) 
-FROM funcionarios AS f2 
-LEFT JOIN salario AS s2 ON f2.id_fun = s2.id_fun
-WHERE f2.id_depart = f.id_depart -- Do mesmo departamento
-AND s2.Data_inicio = ( -- E que o salário (s2) seja o mais recente desse funcionário (f2)
-SELECT MAX(s3.Data_inicio)
-FROM salario s3
-WHERE s3.id_fun = f2.id_fun
-    )
-)
-ORDER BY nome_departamento, salario_atual DESC;
+JOIN departamentos AS d
+    ON f.id_depart = d.id_depart
+JOIN salario as sal 
+    ON f.id_fun = sal.id_fun
+    AND sal.salario_bruto > (                  
+        SELECT AVG(s2.salario_bruto)          
+        FROM funcionarios AS f2               
+        JOIN salario AS s2 
+            ON f2.id_fun = s2.id_fun
+        WHERE f2.id_depart = f.id_depart);
 -------------------------------------------------------------------------------------------------------------------------------
 
 --21. Funcionários auferem salário mais de 1500 euros, têm um total de férias atribuidas entre 10 e 15, com numero de dependentes do sexo feminino
@@ -409,4 +397,3 @@ FROM (
 RIGHT JOIN departamentos as d 
   ON d.id_depart = f.id_depart
 GROUP BY d.nome, f.id_depart;
-
