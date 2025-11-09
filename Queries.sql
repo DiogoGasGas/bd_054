@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------
 set search_path to bd054_schema, public;
 
---1. Número de funcionários por departamento (vista)
+--1. Número de funcionários por departamento 
 -- Objetivo: contar quantos funcionários existem em cada departamento
 SELECT
   d.nome,              -- nome do departamento
@@ -322,7 +322,7 @@ SELECT
 FROM 
     funcionarios AS f
 
--- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE
+-- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE, assumindo que num funcionamento normal de uma empresa, o salário mais alto seja o mais recente
 JOIN remuneracoes AS r 
     ON f.id_fun = r.id_fun
     AND r.Data_inicio = (
@@ -370,7 +370,7 @@ SELECT AVG(s2.salario_bruto)
 FROM funcionarios AS f2 
 LEFT JOIN salario AS s2 ON f2.id_fun = s2.id_fun
 WHERE f2.id_depart = f.id_depart -- Do mesmo departamento
-AND s2.Data_inicio = ( -- E que o salário (s2) seja o mais recente desse funcionário (f2)
+AND s2.Data_inicio = ( -- E que o salário (s2) seja o mais recente desse funcionário (f2), assume-se que a tendência natural é o maior salário ser sempre o mais recente
 SELECT MAX(s3.Data_inicio)
 FROM salario s3
 WHERE s3.id_fun = f2.id_fun
