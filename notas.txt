@@ -1,6 +1,0 @@
-QUERIE 9:
-Só aparece 4 departamentos
-
-
-QUERIE 19
-Não existe essas condições (dados foram alterados)
