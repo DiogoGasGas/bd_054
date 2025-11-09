@@ -136,7 +136,7 @@ WHERE fer.num_dias = (
 ORDER BY f.id_fun;
 --------------------------------------------------------------------------------------------
 
---9. Média de pontuação de avaliação por departamento
+--9.  Departamentos com média salarial acima da média salarial geral, com a média de avaliação 
 SELECT
   d.nome AS nome_depart,            -- nome do departamento
   COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
