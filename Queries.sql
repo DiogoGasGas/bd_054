@@ -313,27 +313,27 @@ ORDER BY taxa_adesao DESC;
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --19. Funcionários trabalharam na empresa Moura, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
-SELECT
-DISTINCT(f.primeiro_nome || ' ' || f.ultimo_nome) As nome_completo,
--- o distinct é necessário uma vez que um funcionário pode aparecer repetido em benefícios diferentes ou empresas
-h.nome_empresa AS trabalhou_em,
-s.salario_bruto,
-b.tipo
+SELECT DISTINCT f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+s.salario_bruto AS salario_atual, b.tipo AS tipo_beneficio,
+h.nome_empresa AS trabalhou_em -- Esta coluna será sempre 'Moura'
 FROM funcionarios AS f
-JOIN historico_empresas AS h 
-  ON f.id_fun = h.id_fun
--- associar os funcionários ao seu histórico
-  AND (h.nome_empresa = 'Moura')
--- filtrar apenas para a empresa Marques
-JOIN salario As s 
-  ON f.id_fun = s.id_fun
--- associar funcionários ao seu salário
-  AND s.salario_bruto > 1500
--- filtrar para salários superiores a 1500 euros
+JOIN remuneracoes AS r   -- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE
+ON f.id_fun = r.id_fun AND r.Data_inicio = (
+SELECT MAX(r2.Data_inicio) 
+FROM remuneracoes r2 
+WHERE r2.id_fun = f.id_fun
+)
+JOIN salario AS s   -- 2. Verifica o SALÁRIO para ESSE período
+ON r.id_fun = s.id_fun 
+AND r.Data_inicio = s.Data_inicio -- Garante que é do período recente
+AND s.salario_bruto > 1500        -- Aplica o filtro do salário
 JOIN beneficios AS b
-  ON f.id_fun = b.id_fun 
-  AND b.tipo = 'Seguro Saúde';
--- definir benefício pretendido
+ON r.id_fun = b.id_fun 
+AND r.Data_inicio = b.Data_inicio -- Garante que é do período recente
+AND b.tipo = 'Seguro Saúde'       -- Aplica o filtro do benefício
+JOIN historico_empresas AS h  -- 4. Verifica o HISTÓRICO (em qualquer altura)
+ON f.id_fun = h.id_fun 
+AND h.nome_empresa = 'Moura';
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
