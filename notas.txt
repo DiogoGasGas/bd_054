@@ -1,0 +1,8 @@
+QUERIE 2
+Funcionarios aparecem duplicados
+
+QUERIE 19
+Funcionarios aparecem duplicados
+
+QUERIE 21
+Funcionarios aparecem duplicados

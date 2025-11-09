@@ -48,7 +48,7 @@ CREATE TABLE remuneracoes (
     FOREIGN KEY (id_fun) REFERENCES funcionarios(id_fun)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    CHECK(data_fim > data_inicio)
+    CHECK(data_fim >= data_inicio)
 );
 
 --- Criar tabela salarios especialização das remuneracoes

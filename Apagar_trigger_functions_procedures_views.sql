@@ -56,3 +56,5 @@ DROP VIEW IF EXISTS vw_formacoes_funcionarios CASCADE;
 DROP VIEW IF EXISTS vw_vagas_candidatos CASCADE;
 DROP VIEW IF EXISTS vw_estatisticas_gerais CASCADE;
 DROP VIEW IF EXISTS vw_remun_completa CASCADE;
+
+

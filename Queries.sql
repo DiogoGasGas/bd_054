@@ -325,7 +325,7 @@ JOIN beneficios AS b
   ON f.id_fun = b.id_fun 
   AND b.tipo = 'Seguro Saúde';
 -- definir benefício pretendido
---------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
 SELECT 
