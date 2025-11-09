@@ -319,7 +319,6 @@ ON r.id_fun = s.id_fun
 AND r.Data_inicio = s.Data_inicio -- Garante que é do período recente
 AND s.salario_bruto > 1500        -- Aplica o filtro do salário
 JOIN beneficios AS b
-<<<<<<< HEAD
 ON r.id_fun = b.id_fun 
 AND r.Data_inicio = b.Data_inicio -- Garante que é do período recente
 AND b.tipo = 'Seguro Saúde'       -- Aplica o filtro do benefício
@@ -327,12 +326,6 @@ JOIN historico_empresas AS h  -- 4. Verifica o HISTÓRICO (em qualquer altura)
 ON f.id_fun = h.id_fun 
 AND h.nome_empresa = 'Moura';
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-=======
-  ON f.id_fun = b.id_fun 
-  AND b.tipo = 'Seguro Saúde';
--- definir benefício pretendido
---------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------
->>>>>>> 6131d95e458bcdd52b1d6f0f84c6ccd0a343f559
 
 --20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
 SELECT 
