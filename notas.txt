@@ -1,10 +1,6 @@
-QUERIE 2
-Funcionarios aparecem duplicados
+QUERIE 9:
+Só aparece 4 departamentos
+
 
 QUERIE 19
-Funcionarios aparecem duplicados
-
-QUERIE 21
-Funcionarios aparecem duplicados
-
-Não sei se em mais também acontece o mesmo
+Não existe essas condições (dados foram alterados)
