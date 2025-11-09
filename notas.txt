@@ -6,3 +6,5 @@ Funcionarios aparecem duplicados
 
 QUERIE 21
 Funcionarios aparecem duplicados
+
+Não sei se em mais também acontece o mesmo

@@ -1,6 +1,10 @@
 set search_path TO bd054_schema, public;
 
---- Criar a tabela dos funcionários primeiro sem o id do departamento
+-- ====================================================================
+-- TABELA: funcionarios
+-- Armazena informações dos funcionários da empresa
+-- Criada primeiro sem referência ao departamento para evitar dependência circular
+-- ====================================================================
 
 CREATE TABLE funcionarios (
     id_fun INT PRIMARY KEY,   --- id_fun chave primária
@@ -16,7 +20,10 @@ CREATE TABLE funcionarios (
     cargo VARCHAR(50)
 );
 
--- Criar a tabela departamentos
+-- ====================================================================
+-- TABELA: departamentos
+-- Armazena os departamentos da empresa e seu gerente
+-- ====================================================================
 
 CREATE TABLE departamentos (
     id_depart INT PRIMARY KEY, --- id_depart chave primária
@@ -28,7 +35,10 @@ CREATE TABLE departamentos (
     CHECK(nome IN ('Recursos Humanos', 'Tecnologia da Informação', 'Financeiro', 'Marketing', 'Vendas', 'Qualidade', 'Atendimento ao Cliente', 'Jurídico'))  --- Estes são os nomes dos departamentos existentes
 );
 
---- Adicionar a coluna id do departamento na tabela funcionarios e esse id referencia um dos departamentos da tabela departamentos
+-- ====================================================================
+-- Adicionar relação funcionario-departamento
+-- Estabelece a ligação entre funcionários e seus departamentos
+-- ====================================================================
 
 ALTER TABLE funcionarios
 ADD COLUMN id_depart INT; 
@@ -38,7 +48,10 @@ ADD FOREIGN KEY (id_depart) REFERENCES departamentos(id_depart)
 ON DELETE SET NULL  --- Ao apagar um departamento todos os funcionários desse departamento ficam com o departamento NULL
 ON UPDATE CASCADE;
 
--- Criar tabela remuneracoes entidade fraca dos funcionarios
+-- ====================================================================
+-- TABELA: remuneracoes
+-- Entidade fraca - armazena períodos de remuneração dos funcionários
+-- ====================================================================
 
 CREATE TABLE remuneracoes (
     id_fun INT,
@@ -51,7 +64,10 @@ CREATE TABLE remuneracoes (
     CHECK(data_fim >= data_inicio)
 );
 
---- Criar tabela salarios especialização das remuneracoes
+-- ====================================================================
+-- TABELA: salario
+-- Especialização de remunerações - armazena valores de salários
+-- ====================================================================
 
 CREATE TABLE salario (
     id_fun INT,
@@ -64,7 +80,10 @@ CREATE TABLE salario (
         ON UPDATE CASCADE
 );
 
---- Criar tabela beneficios especialização das remuneracoes
+-- ====================================================================
+-- TABELA: beneficios
+-- Especialização de remunerações - armazena benefícios adicionais
+-- ====================================================================
 
 CREATE TABLE beneficios (
     id_fun INT,
@@ -78,7 +97,10 @@ CREATE TABLE beneficios (
     CHECK (tipo IN ('Subsídio Alimentação', 'Seguro Saúde', 'Carro Empresa', 'Subsídio Transporte', 'Telemóvel Empresa'))
 );
 
---- Criar tabela ferias entidade fraca dos funcionarios
+-- ====================================================================
+-- TABELA: ferias
+-- Entidade fraca - regista pedidos de férias dos funcionários
+-- ====================================================================
 
 CREATE TABLE ferias (
     id_fun INT,
@@ -94,7 +116,10 @@ CREATE TABLE ferias (
     CHECK(estado_aprov IN ('Aprovado', 'Rejeitado', 'Por aprovar'))
 );
 
---- Criar tabela dependentes entidade fraca dos funcionarios (filhos, pai, mãe, conjugue, outro)
+-- ====================================================================
+-- TABELA: dependentes
+-- Entidade fraca - regista dependentes dos funcionários (familiares)
+-- ====================================================================
 
 CREATE TABLE dependentes (
     id_fun INT,
@@ -109,7 +134,10 @@ CREATE TABLE dependentes (
     CHECK (sexo IN ('Masculino', 'Feminino', 'Outro')) 
 );
 
---- Criar tabela faltas entidade fraca dos funcionarios
+-- ====================================================================
+-- TABELA: faltas
+-- Entidade fraca - regista faltas dos funcionários e suas justificações
+-- ====================================================================
 
 CREATE TABLE faltas (
     id_fun INT,
@@ -121,8 +149,10 @@ CREATE TABLE faltas (
     ON UPDATE CASCADE
 );
 
-
---- Criar tabela historico_empresas entidade fraca dos funcionarios
+-- ====================================================================
+-- TABELA: historico_empresas
+-- Entidade fraca - armazena experiência profissional anterior dos funcionários
+-- ====================================================================
 
 CREATE TABLE historico_empresas (
     id_fun INT,
@@ -137,8 +167,10 @@ CREATE TABLE historico_empresas (
     CHECK (data_fim IS NULL OR data_fim > data_inicio)
 );
 
-
---- Criar tabela candidatos 
+-- ====================================================================
+-- TABELA: candidatos
+-- Armazena informações de candidatos a vagas na empresa
+-- ====================================================================
 
 CREATE TABLE candidatos (
     id_cand INT,
@@ -150,9 +182,10 @@ CREATE TABLE candidatos (
     PRIMARY KEY (id_cand)
 );
 
-
---- Criar tabela vagas
-
+-- ====================================================================
+-- TABELA: vagas
+-- Regista as vagas de emprego disponíveis na empresa
+-- ====================================================================
 
 CREATE TABLE vagas (
     id_vaga INT,
@@ -164,8 +197,10 @@ CREATE TABLE vagas (
     CHECK (estado IN ('Aberta', 'Fechada', 'Suspensa'))
 );
 
-
---- Criar tabela candidato_a (tabela associativa entre candidatos e vagas)
+-- ====================================================================
+-- TABELA: candidato_a
+-- Tabela associativa - relaciona candidatos com vagas a que se candidataram
+-- ====================================================================
 
 CREATE TABLE candidato_a (
     id_cand INT,
@@ -183,8 +218,10 @@ CREATE TABLE candidato_a (
     CHECK (estado IN ('Submetido', 'Em análise', 'Entrevista', 'Rejeitado', 'Contratado'))
 );
 
-
---- Criar tabela requisitos_vaga (tabela fraca de vagas)
+-- ====================================================================
+-- TABELA: requisitos_vaga
+-- Entidade fraca - armazena os requisitos necessários para cada vaga
+-- ====================================================================
 
 CREATE TABLE requisitos_vaga (
     id_vaga INT,
@@ -195,8 +232,10 @@ CREATE TABLE requisitos_vaga (
     ON UPDATE CASCADE
 );
 
-
---- Criar tabela formacoes
+-- ====================================================================
+-- TABELA: formacoes
+-- Armazena cursos e formações disponibilizados pela empresa
+-- ====================================================================
 
 CREATE TABLE formacoes (
     id_for INT,
@@ -210,8 +249,11 @@ CREATE TABLE formacoes (
     CHECK (estado IN ('Planeada', 'Em curso', 'Concluida', 'Cancelada'))
 );
 
+-- ====================================================================
+-- TABELA: teve_formacao
+-- Tabela associativa - relaciona funcionários com formações que frequentaram
+-- ====================================================================
 
---- Criar tabela teve_formacao (tabela associativa entre funcionarios e formacoes)
 CREATE TABLE teve_formacao (
     id_fun INT,
     id_for INT, 
@@ -228,8 +270,10 @@ CREATE TABLE teve_formacao (
     CHECK (data_fim IS NULL OR data_fim >= data_inicio) 
 );
 
-
---- Criar tabela avaliacoes
+-- ====================================================================
+-- TABELA: avaliacoes
+-- Regista avaliações de desempenho dos funcionários
+-- ====================================================================
 
 CREATE TABLE avaliacoes (
     id_fun INT,
@@ -248,8 +292,10 @@ CREATE TABLE avaliacoes (
     ON UPDATE CASCADE
 );
 
-
---- Criar tabela utilizadores entidade fraca dos funcionarios
+-- ====================================================================
+-- TABELA: utilizadores
+-- Entidade fraca - armazena credenciais de acesso ao sistema
+-- ====================================================================
 
 CREATE TABLE utilizadores (
     id_fun INT,
@@ -260,7 +306,10 @@ CREATE TABLE utilizadores (
     ON UPDATE CASCADE
 );
 
---- Criar tabela permissoes
+-- ====================================================================
+-- TABELA: permissoes
+-- Define as permissões de acesso de cada utilizador no sistema
+-- ====================================================================
 
 CREATE TABLE permissoes (
     id_fun INT,
