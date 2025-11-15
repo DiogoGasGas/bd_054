@@ -1,3 +1,5 @@
+
+
 -- começa se por criar uma tabela para armazenar os dados obtidos no benchmarking
 
 CREATE TABLE benchmark_results (
