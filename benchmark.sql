@@ -14,8 +14,7 @@ CREATE TABLE benchmark_results (
     total_cost DOUBLE PRECISION,
     rows_returned INT,
     buffers_hit INT,
-    buffers_read INT,
-    execution_date TIMESTAMP DEFAULT NOW()
+    buffers_read INT
 ); 
 
 
