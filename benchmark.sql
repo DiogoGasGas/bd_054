@@ -3,7 +3,7 @@ set search_path to benchmark_schema, public;
 -- primeiro de tudo, cria se uma tabela para armazenar os resultados do benchmark
  
 
-/*
+
 CREATE TABLE benchmark_results (
     id SERIAL PRIMARY KEY,
     query_name TEXT,
@@ -16,7 +16,7 @@ CREATE TABLE benchmark_results (
     buffers_hit INT,
     buffers_read INT,
     execution_date TIMESTAMP DEFAULT NOW()
-); */
+); 
 
 
 -- Função para executar o benchmark de uma query específica
