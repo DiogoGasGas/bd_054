@@ -1,4 +1,5 @@
 (nao testei nada)
+o 4 indice, o composto, implica uma alteração do codigo das queries que ele influencia
 
 ---- Criação de índices para otimização de consultas
 
