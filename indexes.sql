@@ -162,11 +162,6 @@ CREATE INDEX ind_nome_historico ON historico_empresas(nome_empresa);
 --15
 CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 
---16
-CREATE INDEX ind_descricao_formacao ON formacoes(descricao);
-
---17
-CREATE INDEX hash_descricao_formacao ON formacoes USING hash(descricao);
 
 --18
 CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
@@ -180,24 +175,7 @@ CREATE INDEX ind_primeiro_nome ON funcionario(primeiro_nome);
 --21
 CREATE INDEX ind_ultimo_nome ON funcionario(ultimo_nome);
 
---22
-CREATE INDEX ind_estado_aprov ON ferias(estado_aprov);
 
---23
-CREATE INDEX hash_estado_aprov ON ferias USING hash(estado_aprov):
-
-
---24
-CREATE INDEX ind_autoavaliacao ON avaliacoes(autoavaliacao);
-
---25
-CREATE INDEX hash_autoavaliacao ON avaliacoes USING hash(autoavaliacao);
-
---26
-CREATE INDEX ind_nome_empresa ON historico_empresas(nome_empresa);
-
---27
-CREATE INDEX hash_nome_empresa ON historico_empresas USING hash(nome_empresa);
 
 
 
