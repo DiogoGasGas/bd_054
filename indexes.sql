@@ -11,7 +11,7 @@ sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes pa
 
 -- =======================================================================================================================================================================================================================
 -- =======================================================================================================================================================================================================================
-
+--1
 /* Índice B-tree para otimizar consultas que envolvam o id do departamento nos funcionários, foreign key.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por id_depart. 
 As queries 1,3,5,9,10,11,15,18,22 serão melhoradas devido aos JOINs que usam do id_depart para relacionar 
@@ -20,6 +20,8 @@ as tabelas funcionarios e departamentos.
 
 CREATE INDEX ind_fun_depart ON funcionarios(id_depart);
 
+
+--2
 /*
 Índice B-tree responsável por organizar os dados referentes aos nomes dos departamentos
 Otimiza consultas que filtrem por departamentos específicos ou usem ORDER BY por nome
@@ -29,6 +31,8 @@ JOIN, GROUP BY e ORDER BY que envolvem a tabela departamentos netsas queries.
 
 CREATE INDEX ind_nome_depart ON departamentos(nome);
 
+
+--3
 /*
 Índice B-tree útil para ordenar os salários brutos dos funcionários.
 Melhora o desempenho de consultas que envolvam ORDER BY ou filtrem por salário bruto.
@@ -40,6 +44,8 @@ cláusulas WHERE, HAVING e filtros ( >, <) que envolvem a coluna salario_bruto n
 
 CREATE INDEX ind_salario_bruto ON salario(salario_bruto);
 
+
+--4
 /* Índice composto B-tree para otimizar consultas que necessitem do salário mais recente de cada funcionário.
    Melhora o desempenho de buscas que filtrem por id_fun e ordenam por data de início em ordem decrescente.
    Queries que dão return ao salário atual de um funcionário específico serão beneficiadas por este índice
@@ -48,6 +54,8 @@ CREATE INDEX ind_salario_bruto ON salario(salario_bruto);
 */
 CREATE INDEX ind_salario_fun_data ON salario(id_fun, data_inicio DESC);
 
+
+--5
 /* 
 Índice B-tree para otimizar consultas que envolvam o tipo dos benefícios.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por tipo dos benefícios.
@@ -57,6 +65,8 @@ futuras queries que possam ter esta característica.
 
 CREATE INDEX ind_tipo_beneficio ON beneficios(tipo);
 
+
+--6
 /*
 Índice Hash para otimizar consultas que envolvam o valor dos benefícios.
 Útil para buscas rápidas por tipos específicos de benefícios, apenas por igualdade,
@@ -67,6 +77,8 @@ apesar de ser muito menos prático que o índice B-tree para a maioria dos casos
 
 CREATE INDEX hash_tipo_beneficio ON beneficios USING HASH(tipo);
 
+
+--7
 /*
 Índice B-tree para otimizar consultas que envolvam o valor dos benefícios.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por valor dos benefícios.
@@ -76,6 +88,8 @@ e HAVING que envolvem o valor dos benefícios.
 
 CREATE INDEX ind_valor_beneficio ON beneficios(valor);
 
+
+--8
 /*
 Índice B-tree para otimizar consultas relacionadas ao parentesco dos dependentes dos funcionários.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por parentesco.
@@ -84,6 +98,8 @@ A query 10 deve ser beneficiado por este índice, devido à agregação por pare
 
 CREATE INDEX ind_parentesco_dependentes ON dependentes(parentesco);
 
+
+--9
 /*
 Índice Hash para otimizar consultas que envolvam o parentesco dos dependentes.
 Útil para buscas rápidas por tipos específicos de parentesco, apenas por igualdade,
@@ -92,6 +108,8 @@ servirá para testar o desempenho comparativamente ao indice B-tree acima criado
 
 CREATE INDEX hash_parentesco_dependentes ON dependentes USING HASH(parentesco);
 
+
+--10
 /*
 Índice B-tree para otimizar consultas relacionadas às justificações de faltas dos funcionários
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por justificações.
@@ -101,6 +119,8 @@ A query 14 vai beneficiar na parte do COUNT onde a contagem será acelerada. As 
 
 CREATE INDEX ind_justificacao_faltas ON faltas(justificacao);
 
+
+--11
 /*
 Índice Hash para otimizar consultas que envolvam as justificações de faltas dos funcionários.
 Útil para buscas rápidas por tipos específicos de justificações, apenas por igualdade,
@@ -111,6 +131,8 @@ devido à natureza das igualdades.
 
 CREATE INDEX hash_justificacao_faltas ON faltas USING hash(justificacao);
 
+
+--12
 /*
 Índice B-tree para otimizar consultas relacionadas às avaliações numéricas dos funcionários.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por avaliação numérica.
@@ -120,6 +142,8 @@ no uso de um WHERE ou ORDER BY envolvendo a avaliação numérica, o índice ser
 
 CREATE INDEX ind_avaliacao_num ON avaliacoes(avaliacao_numerica);
 
+
+--13
 /*
 Índice composto B-tree útil para melhorar consultas que envolvam o período de férias dos funcionários.
 Otimiza buscas que filtrem ou usem ORDER BY por datas de início e fim das férias.
