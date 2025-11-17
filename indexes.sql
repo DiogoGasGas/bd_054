@@ -6,7 +6,7 @@ o 4 indice, o composto, implica uma alteração do codigo das queries que ele in
 /* 
 Por definição, índices B-tree são criados para colunas com alta cardinalidade e consultas frequentes
 sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes para consultas de igualdade em colunas com baixa cardinalidade.
-    Sem qualquer idnicação do contrário, os índices são criados como B-tree.
+    Sem qualquer indicação do contrário, os índices são criados como B-tree.
 */
 
 -- =======================================================================================================================================================================================================================
@@ -26,7 +26,7 @@ CREATE INDEX ind_fun_depart ON funcionarios(id_depart);
 Índice B-tree responsável por organizar os dados referentes aos nomes dos departamentos
 Otimiza consultas que filtrem por departamentos específicos ou usem ORDER BY por nome
 É esperado que as queries 1,3,5,9,10,11,14,15,18,20,22 se beneficiem deste índice devido aos
-JOIN, GROUP BY e ORDER BY que envolvem a tabela departamentos netsas queries.
+JOIN, GROUP BY e ORDER BY que envolvem a tabela departamentos nestas queries.
 */
 
 CREATE INDEX ind_nome_depart ON departamentos(nome);
@@ -49,7 +49,7 @@ CREATE INDEX ind_salario_bruto ON salario(salario_bruto);
 /* Índice composto B-tree para otimizar consultas que necessitem do salário mais recente de cada funcionário.
    Melhora o desempenho de buscas que filtrem por id_fun e ordenam por data de início em ordem decrescente.
    Queries que dão return ao salário atual de um funcionário específico serão beneficiadas por este índice
-   As queries 2,3,4,9,15,19,20,21, devem benenficiar devido às subqueries que criam gargalos e loops excessivos
+   As queries 2,3,4,9,15,19,20,21, devem beneficiar devido às subqueries que criam gargalos e loops excessivos
    ao buscar o salário mais recente dos funcionários, além disso HAVING e ORDER BY também se beneficiarão deste índice.
 */
 CREATE INDEX ind_salario_fun_data ON salario(id_fun, data_inicio DESC);
@@ -93,7 +93,8 @@ CREATE INDEX ind_valor_beneficio ON beneficios(valor);
 /*
 Índice B-tree para otimizar consultas relacionadas ao parentesco dos dependentes dos funcionários.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por parentesco.
-A query 10 deve ser beneficiado por este índice, devido à agregação por parentesco.
+Este indice é especialmente útil no caso de haverem igualdades para o grau de parentesco, quer num WHERE ou num HAVING.
+««««««A query 10 deve ser beneficiado por este índice, devido à agregação por parentesco.»»»»»»»»
 */
 
 CREATE INDEX ind_parentesco_dependentes ON dependentes(parentesco);
@@ -125,7 +126,8 @@ CREATE INDEX ind_justificacao_faltas ON faltas(justificacao);
 Índice Hash para otimizar consultas que envolvam as justificações de faltas dos funcionários.
 Útil para buscas rápidas por tipos específicos de justificações, apenas por igualdade,
 vai servir para testar o desempenho comparando com o indice B-tree acima criado.
-Assim como acima, a query 14 terá o desempenho melhorado, apresentará uma performance melhor
+Este hash será especialmente útil no caso de haver algum WHERE ou HAVING onde se utiliza uma igualdade para a especifica justificação.
+«««««««Assim como acima, a query 14 terá o desempenho melhorado, apresentará uma performance melhor»»»»»»»
 devido à natureza das igualdades. 
 */
 
@@ -136,7 +138,7 @@ CREATE INDEX hash_justificacao_faltas ON faltas USING hash(justificacao);
 /*
 Índice B-tree para otimizar consultas relacionadas às avaliações numéricas dos funcionários.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por avaliação numérica.
-A query 9 terá um desempenho melhorado indiretamente, no caclulo do AVG não afeta diretamente, caso necessário,
+A query 9 terá um desempenho melhorado indiretamente, no calculo do AVG não afeta diretamente, caso necessário,
 no uso de um WHERE ou ORDER BY envolvendo a avaliação numérica, o índice será útil.
 */
 
@@ -153,7 +155,56 @@ As queries 5,8,21 serão afetadas indiretamente, caso haja necessidade de filtro
 CREATE INDEX datas_ferias ON ferias(data_inico, data_fim);
 
 
--- sugestoes a fazer , historico de empresas, formacoes
+--14
+
+CREATE INDEX ind_nome_historico ON historico_empresas(nome_empresa);
+
+--15
+CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
+
+--16
+CREATE INDEX ind_descricao_formacao ON formacoes(descricao);
+
+--17
+CREATE INDEX hash_descricao_formacao ON formacoes USING hash(descricao);
+
+--18
+CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
+
+--19 
+CREATE INDEX hash_nome_completo ON funcionario USING hash((primeiro_nome || ' ' || ultimo_nome));
+
+--20
+CREATE INDEX ind_primeiro_nome ON funcionario(primeiro_nome);
+
+--21
+CREATE INDEX ind_ultimo_nome ON funcionario(ultimo_nome);
+
+--22
+CREATE INDEX ind_estado_aprov ON ferias(estado_aprov);
+
+--23
+CREATE INDEX hash_estado_aprov ON ferias USING hash(estado_aprov):
+
+
+--24
+CREATE INDEX ind_autoavaliacao ON avaliacoes(autoavaliacao);
+
+--25
+CREATE INDEX hash_autoavaliacao ON avaliacoes USING hash(autoavaliacao);
+
+--26
+CREATE INDEX ind_nome_empresa ON historico_empresas(nome_empresa);
+
+--27
+CREATE INDEX hash_nome_empresa ON historico_empresas USING hash(nome_empresa);
+
+
+
+
+
+
+-- sugestoes a fazer , historico de empresas, formacoes, nome do funcionario
 ------------------------------------------------------
 
 DROP INDEX IF EXISTS ind_fun_depart;
