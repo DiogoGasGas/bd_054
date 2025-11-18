@@ -133,4 +133,25 @@ ORDER BY tot_remun DESC;',
     'antes'
 );
 
+SELECT run_benchmark(
+    '
+    SELECT  
+        f.id_fun,
+        f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
+        SUM(b.valor) AS tot_benef
+    FROM bd054_schema.funcionarios AS f
+    JOIN bd054_schema.beneficios AS b 
+        ON f.id_fun = b.id_fun
+    WHERE b.tipo = ''Seguro Saúde''
+    GROUP BY nome_completo, f.id_fun
+    HAVING SUM(b.valor) > (
+        SELECT AVG(valor) 
+        FROM bd054_schema.beneficios
+        WHERE tipo = ''Seguro Saúde''
+    )
+    ORDER BY f.id_fun ASC;
+;',
+    'Q07',
+    'antes'
+);
 
