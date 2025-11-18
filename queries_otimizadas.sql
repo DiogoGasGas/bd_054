@@ -1,0 +1,542 @@
+set search_path to bd054_schema, public;
+
+-- Querie 1 original
+ANALYZE departamentos;
+ANALYZE funcionarios;
+
+EXPLAIN ANALYZE
+SELECT
+  d.nome,              -- nome do departamento
+  COUNT(f.id_fun) AS total_funcionarios -- número total de funcionários no departamento
+FROM departamentos AS d
+-- LEFT JOIN permite listar também departamentos sem funcionários
+LEFT JOIN funcionarios AS f 
+ON d.id_depart= f.id_depart
+-- agrupa os resultados por departamento para fazer a contagem corretamente
+GROUP BY d.nome
+ORDER BY total_funcionarios DESC;
+
+-- Otimização 1: Pré-agragação (A mais impactante)
+ANALYZE departamentos;
+ANALYZE funcionarios;
+
+EXPLAIN ANALYZE
+SELECT
+  d.nome,
+  COALESCE(contagem.total, 0) AS total_funcionarios
+FROM departamentos AS d
+LEFT JOIN (
+  -- Agregamos PRIMEIRO, reduzindo de 100 (ou milhões) linhas para apenas o nº de departamentos ativos
+  SELECT id_depart, COUNT(*) AS total
+  FROM funcionarios
+  GROUP BY id_depart
+) AS contagem ON d.id_depart = contagem.id_depart
+ORDER BY total_funcionarios DESC;
+
+
+-- Otimização 2: Agrupamento por ID (Eficiência de Hash)
+
+ANALYZE departamentos;
+ANALYZE funcionarios;
+
+EXPLAIN ANALYZE
+SELECT
+  d.nome,
+  COUNT(f.id_fun) AS total_funcionarios
+FROM departamentos AS d
+LEFT JOIN funcionarios AS f ON d.id_depart = f.id_depart
+-- Agrupar pelo ID (inteiro) é computacionalmente mais barato que por Nome (texto)
+GROUP BY d.id_depart
+ORDER BY total_funcionarios DESC;
+
+-------------------------------------------------------------------------
+
+-- Querie 2 original
+
+ANALYZE funcionarios;
+ANALYZE salario;
+
+EXPLAIN ANALYZE
+SELECT
+f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+s.salario_bruto AS salario_bruto
+FROM
+funcionarios f
+LEFT JOIN salario s ON f.ID_fun = s.ID_fun
+WHERE s.salario_bruto > (      -- Filtro 1: O salário tem de ser maior que a média global
+SELECT AVG(salario_bruto) 
+FROM salario 
+)                          -- Filtro 2: "Olha só para o registo mais recente deste funcionário"
+AND s.Data_inicio = (
+SELECT MAX(s2.Data_inicio)
+FROM salario s2
+WHERE s2.ID_fun = f.ID_fun 
+)
+ORDER BY
+salario_bruto DESC;
+
+-- Querie 2 otimizada - Usando DISTINCT ON para evitar subquery por funcionário. Distinct on pega automaticamente o ultimo salário
+
+ANALYZE funcionarios;
+ANALYZE salario;
+
+EXPLAIN ANALYZE
+SELECT 
+  f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+  s_recentes.salario_bruto
+FROM funcionarios f
+LEFT JOIN (
+  -- Seleciona apenas UM registo por id_fun (o primeiro, baseado no ORDER BY)
+  SELECT DISTINCT ON (id_fun) 
+    id_fun, 
+    salario_bruto
+  FROM salario
+  ORDER BY id_fun, Data_inicio DESC
+) s_recentes ON f.id_fun = s_recentes.id_fun
+WHERE s_recentes.salario_bruto > (SELECT AVG(salario_bruto) FROM salario)
+ORDER BY s_recentes.salario_bruto DESC;
+
+
+--------------------------------------------------------------------------
+-- Querie 3 original
+ANALYZE departamentos;
+ANALYZE funcionarios;
+ANALYZE salario;
+
+EXPLAIN ANALYZE
+SELECT d.nome, SUM(s.salario_bruto) AS tot_remun 
+FROM departamentos AS d
+LEFT JOIN funcionarios AS f 
+ON d.id_depart = f.id_depart
+LEFT JOIN salario AS s 
+ON f.id_fun = s.id_fun
+WHERE s.Data_inicio = (   -- garante que só apanhamos o salário mais recente
+SELECT MAX(s2.Data_inicio)
+FROM salario s2
+WHERE s2.id_fun = f.id_fun -- para este funcionário específico
+)
+GROUP BY d.nome
+ORDER BY tot_remun DESC;
+
+
+-- Querie 3 otimizada - Usando CTE para pré-selecionar salários recentes
+
+ANALYZE departamentos;
+ANALYZE funcionarios;
+ANALYZE salario;
+
+EXPLAIN ANALYZE
+WITH SalariosRecentes AS (
+  -- 1. Encontra o salário mais recente para CADA funcionário em UM SÓ SCAN + SORT.
+  -- Esta é a etapa mais crítica para performance.
+  SELECT DISTINCT ON (id_fun)
+    id_fun,
+    salario_bruto
+  FROM salario
+  ORDER BY id_fun, Data_inicio DESC
+)
+SELECT
+  d.nome,
+  COALESCE(SUM(sr.salario_bruto), 0) AS tot_remun 
+FROM departamentos AS d
+-- 2. Faz o JOIN com os funcionários.
+LEFT JOIN funcionarios AS f ON d.id_depart = f.id_depart
+-- 3. Faz o JOIN com a lista de salários recentes (apenas uma linha por funcionário).
+LEFT JOIN SalariosRecentes AS sr ON f.id_fun = sr.id_fun
+-- 4. Agrupa pelo nome, conforme solicitado.
+GROUP BY d.nome
+ORDER BY tot_remun DESC;
+
+------------------------------------------------------------------------------------
+
+--4. Top 3 funcionários com maior total de remuneração 
+-- Objetivo: listar os 3 funcionários com maior salário líquido de forma decrescente
+SELECT f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+s.salario_liquido AS salario_liquido
+FROM 
+funcionarios AS f
+LEFT JOIN salario AS s ON f.id_fun = s.id_fun
+WHERE s.Data_inicio = (       --  garante que é o salário mais recente
+SELECT MAX(s2.Data_inicio)
+FROM salario s2
+WHERE s2.id_fun = f.id_fun -- para este funcionário
+  )
+ORDER BY 
+salario_liquido DESC -- Ordena pelo salário atual
+LIMIT 3;
+-------------------------------------------------------------------------------------
+
+--5. Média de férias por departamento 
+-- Objetivo: calcular a média de dias de férias dos funcionários em cada departamento
+SELECT
+  d.nome,                    -- nome do departamento
+  ROUND(AVG(fer.num_dias),0) AS media_dias_ferias      -- média de dias de férias no departamento, arredondada para o inteiro mais proximo
+FROM departamentos AS d
+JOIN funcionarios AS f 
+ON d.id_depart = f.id_depart
+JOIN ferias AS fer 
+ON f.id_fun = fer.id_fun
+-- agrupa por departamento para calcular a média de férias de cada um
+GROUP BY d.nome;
+------------------------------------------------------------------------------
+
+--6.Comparação com média global nas formações 
+-- Objetivo: listar formações cujo número de aderentes está acima da média de todas as formações
+-- é usada a funcao calcular_num_aderentes_formacao para este efeito
+SELECT
+  f.id_for,
+  f.nome_formacao,
+  calcular_num_aderentes_formacao(f.id_for) AS num_aderentes
+FROM formacoes AS f
+-- compara cada formação com a média global de aderentes (subquery calcula essa média)
+WHERE calcular_num_aderentes_formacao(f.id_for) >(
+  SELECT AVG(calcular_num_aderentes_formacao(id_for)) 
+  FROM formacoes
+)
+ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
+-----------------------------------------------------------------------------
+
+--7. funcionários com benificio do tipo 'Seguro Saúde' com prémio de benefícios acima da média 
+SELECT 
+f.id_fun,
+f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+SUM(b.valor) AS tot_benef  -- soma dos valores acumulados de benefícios que um funcionário possa ter
+FROM funcionarios AS f
+JOIN beneficios AS b 
+ON f.id_fun = b.id_fun
+-- filtrar seguros de saúde
+WHERE b.tipo = 'Seguro Saúde'
+GROUP BY nome_completo, f.id_fun
+-- filtrar para obter apenas a media dos beneficios que sao seguro de saúde
+HAVING SUM(b.valor) > (
+  SELECT AVG(valor) 
+  FROM beneficios
+  WHERE tipo = 'Seguro Saúde'
+)
+ORDER BY f.id_fun ASC;
+---------------------------------------------------------------------------------
+
+--8. Funcionário com mais dias de férias aprovadas
+-- Objetivo: identificar o/os funcionário com mais dias de férias
+SELECT
+  f.id_fun,
+  f.primeiro_nome,        -- nome do funcionário
+  fer.num_dias,       -- número de dias de férias
+  fer.data_inicio       -- a data de inicio ajuda a perceber o prquê de certas repetições
+FROM funcionarios AS f
+JOIN ferias AS fer ON f.id_fun = fer.id_fun
+-- subquery identifica o valor máximo de dias de férias aprovadas
+WHERE fer.num_dias = (
+  SELECT MAX(num_dias) 
+  FROM ferias 
+  WHERE estado_aprov = 'Aprovado'
+)
+ORDER BY f.id_fun;
+--------------------------------------------------------------------------------------------
+
+--9.  Departamentos com média salarial acima da média salarial geral, com a média de avaliação 
+SELECT
+  d.nome AS nome_depart,            -- nome do departamento
+  COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
+  AVG(s.salario_bruto) AS media_salario  -- média salarial dos funcionários do departamento
+FROM funcionarios AS f
+RIGHT JOIN departamentos AS d
+  ON d.id_depart = f.id_depart
+JOIN avaliacoes AS a 
+  ON f.id_fun = a.id_fun
+JOIN salario AS s
+  ON f.id_fun = s.id_fun
+-- agrupa por departamento para calcular a média de cada um
+GROUP BY d.nome
+-- filtra apenas os departamentos em que a média salarial é maior que a média salarial geral
+HAVING AVG(s.salario_bruto) > (
+  SELECT AVG(salario_bruto)
+  FROM salario
+)
+ORDER BY media_aval DESC;
+----------------------------------------------------------------------
+
+--10. Dependentes e funcionário respetivo 
+-- Objetivo: mostrar cada dependente com o respetivo funcionário titular e o departamento desse funcionário
+SELECT
+  f.id_fun, 
+  f.primeiro_nome || ' '|| f.ultimo_nome AS nome_funcionario, -- id e nome do funcionário titular
+  dep.nome   as nome_dep,                      -- nome do departamento do funcionário
+  STRING_AGG(d.nome || ' (' || d.parentesco || ')', ', ') AS dependentes -- agrega todos os dependnetes numa unica linha
+FROM dependentes AS d
+-- junta Dependentes com Funcionarios para saber quem é o titular
+JOIN Funcionarios f ON d.id_fun = f.id_fun
+-- junta Funcionarios com Departamentos para saber a qual departamento o titular pertence
+JOIN departamentos AS dep 
+ON f.id_depart = dep.id_depart
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome, dep.nome -- necessário devido ao string_agg
+ORDER BY nome_funcionario; -- orderna por ordem alfabética
+-----------------------------------------------------------------------------
+
+--11. Vagas 
+-- Objetivo: calcular a média de candidatos por departamento, com o número de vagas em cada departamento
+SELECT
+  dep.id_depart,
+  dep.nome AS nome_depart,                        -- departamento
+  COUNT(v.id_vaga) AS num_vagas,                -- quantas vagas existem no departamento
+  -- média de candidatos por vaga nesse departamento, coalesce para cotar null como 0
+  COALESCE(AVG(cand_a.num_cand), 0)  AS media_candidatos     
+FROM departamentos as dep
+-- associar todas as vagas ao seu departamento
+LEFT JOIN vagas AS v
+  ON v.id_depart = dep.id_depart
+-- a subquery calcula o número de candidatos por vaga, num_cand
+-- o LEFT JOIN associa esses dados às vagas, garantindo que nenhuma vaga é excluida
+LEFT JOIN ( 
+  SELECT 
+  id_vaga, 
+  COUNT(id_cand) as num_cand
+  FROM candidato_a
+  GROUP BY id_vaga
+) AS cand_a
+ON cand_a.id_vaga = v.id_vaga 
+GROUP BY dep.id_depart, dep.nome 
+-- ordena para ver primeiro os departamentos com maior média de candidatos
+ORDER BY media_candidatos DESC;
+---------------------------------------------------------------------------------------
+
+--12. Número de dependentes 
+-- Objetivo: Número de dependentes de cada funcionário
+SELECT f.id_fun,f.primeiro_nome, 
+  COUNT(d.id_fun) AS num_dependentes  
+FROM funcionarios As f
+LEFT JOIN dependentes AS d 
+  ON f.id_fun = d.id_fun  -- criar tabela incluindo todos os funcionários associando aos dependentes
+GROUP BY f.id_fun, f.primeiro_nome
+ORDER BY num_dependentes desc;  
+------------------------------------------------------------------------------------
+
+--13. Funcionário que não fizeram auto-avaliação
+SELECT 
+    f.primeiro_nome,
+    f.ultimo_nome,
+    av.autoavaliacao
+FROM funcionarios AS f 
+JOIN avaliacoes AS av
+  ON f.id_fun = av.id_fun
+-- se a autoavaliacao é null, é porque não existe avaliação preenchida
+WHERE av.autoavaliacao IS NULL;
+------------------------------------------------------------------------------------
+
+--14. Numero de faltas e faltas justificadas por departamento
+SELECT 
+    d.id_depart,
+    d.nome,
+    COUNT(fal.id_fun) AS total_faltas, -- contar as faltas dos funcionarios
+    COUNT(fal.justificacao) AS total_faltas_just  -- contar numero de justificadas
+FROM departamentos d
+-- vão ser associados funcionarios aos departamentos
+LEFT JOIN funcionarios AS f 
+  ON d.id_depart = f.id_depart
+-- associar faltas a funcionários
+LEFT JOIN faltas AS fal 
+  ON f.id_fun = fal.id_fun
+GROUP BY d.nome, d.id_depart
+ORDER BY total_faltas DESC;
+---------------------------------------------
+
+--15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
+SELECT d.Nome, COUNT(f.ID_fun) AS Numero_Funcionarios,
+AVG(s.salario_bruto) AS Media_Salarial_Departamento
+FROM departamentos AS d
+LEFT JOIN funcionarios AS f 
+ON d.ID_depart = f.ID_depart
+LEFT JOIN salario AS s 
+ON f.ID_fun = s.ID_fun
+WHERE s.Data_inicio = (    -- Filtro 1: Garante que só usamos o salário mais recente de CADA funcionário
+SELECT MAX(s2.Data_inicio) 
+FROM Salario s2 
+WHERE s2.ID_fun = f.ID_fun
+)
+GROUP BY d.Nome
+HAVING AVG(s.salario_bruto) > (    -- Filtro 2: Compara a média do departamento
+SELECT AVG(s_avg.salario_bruto) -- Subquery para a Média Global dos salários atuais
+FROM Salario s_avg
+WHERE s_avg.Data_inicio = (
+SELECT MAX(s_max.Data_inicio)
+FROM Salario s_max
+WHERE s_max.ID_fun = s_avg.ID_fun )
+)
+ORDER BY Media_Salarial_Departamento DESC;
+---------------------------------------------
+
+--16. Funcionários que já trabalharam na mesma empresa
+SELECT 
+  h.nome_empresa, 
+  -- agrega os nomes completos dos funcionários que trabalharam nessa empresa
+  STRING_AGG(f.primeiro_nome || ' ' || f.ultimo_nome, ', ') AS funcionarios
+FROM historico_empresas AS h
+-- junta histórico aos funcionários
+JOIN funcionarios AS f 
+  ON f.id_fun = h.id_fun
+GROUP BY h.nome_empresa
+-- mantém apenas as empresas com mais de um funcionário, ou seja, onde pelo menos dois já trabalharam
+HAVING COUNT(f.id_fun) > 1;
+------------------------------------------------------------------------------------------
+
+--17. Funcionários sem faltas registadas
+SELECT 
+  f.id_fun,
+  f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+  COUNT(fal.data) AS total_faltas
+FROM funcionarios AS f
+LEFT JOIN faltas AS fal 
+  ON f.id_fun = fal.id_fun
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome
+-- filtrar funcionários que têm a soma de faltas igual a 0
+HAVING COUNT(fal.data) = 0
+ORDER BY f.id_fun;
+------------------------------------------------------------------------------------------
+
+--18. Taxa de aderência a formações por departamento
+SELECT 
+    d.nome,
+    ROUND((COUNT(DISTINCT teve.id_fun)::decimal / calcular_num_funcionarios_departamento(d.id_depart)::decimal) * 100, 2) AS taxa_adesao
+-- Round arredonda a 2 casas decimais, o count com recurso ao distinct conta os funcionários que participaram em pelo menos uma formação, 
+-- dividindo-se pelo numero total de pessoas no departamento
+FROM departamentos AS d
+LEFT JOIN funcionarios AS f 
+  ON d.id_depart = f.id_depart
+-- associar funcionários por departamento
+LEFT JOIN teve_formacao AS teve 
+  ON f.id_fun = teve.id_fun
+-- associar funcionários pelas presenças a formações que tiveram
+GROUP BY d.nome, d.id_depart
+ORDER BY taxa_adesao DESC;
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--19. Funcionários trabalharam na empresa Moura, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
+SELECT
+    DISTINCT -- Previne duplicados se o funcionário trabalhou na 'Moura' 2x
+    f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+    s.salario_bruto AS salario_atual,
+    b.tipo AS tipo_beneficio,
+    h.nome_empresa AS trabalhou_em -- Esta coluna será sempre 'Moura'
+FROM 
+    funcionarios AS f
+
+-- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE, assumindo que num funcionamento normal de uma empresa, o salário mais alto seja o mais recente
+JOIN remuneracoes AS r 
+    ON f.id_fun = r.id_fun
+    AND r.Data_inicio = (
+        SELECT MAX(r2.Data_inicio) 
+        FROM remuneracoes r2 
+        WHERE r2.id_fun = f.id_fun
+    )
+
+-- 2. Verifica o SALÁRIO para ESSE período
+JOIN salario AS s 
+    ON r.id_fun = s.id_fun 
+    AND r.Data_inicio = s.Data_inicio -- Garante que é do período recente
+    AND s.salario_bruto > 1500        -- Aplica o filtro do salário
+
+-- 3. Verifica o BENEFÍCIO para ESSE período
+JOIN beneficios AS b
+    ON r.id_fun = b.id_fun 
+    AND r.Data_inicio = b.Data_inicio -- Garante que é do período recente
+    AND b.tipo = 'Seguro Saúde'       -- Aplica o filtro do benefício
+
+-- 4. Verifica o HISTÓRICO (em qualquer altura)
+JOIN historico_empresas AS h 
+    ON f.id_fun = h.id_fun 
+    AND h.nome_empresa = 'Moura';
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
+SELECT f.id_fun, f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+sal.salario_bruto AS salario_atual,
+d.nome AS nome_departamento,
+(SELECT COUNT(*) -- subquery para contar formações 
+FROM teve_formacao AS teve
+WHERE teve.id_fun = f.id_fun
+  ) AS num_formacoes
+FROM funcionarios AS f 
+LEFT JOIN departamentos AS d ON f.id_depart = d.id_depart
+LEFT JOIN salario AS sal ON f.id_fun = sal.id_fun
+WHERE sal.Data_inicio = (   -- Garante que só vemos o salário mais recente do funcionário
+SELECT MAX(s_main.Data_inicio)
+FROM salario s_main
+WHERE s_main.id_fun = f.id_fun
+    )
+AND sal.salario_bruto > ( -- Compara esse salário com a MÉDIA ATUAL do departamento
+SELECT AVG(s2.salario_bruto) 
+FROM funcionarios AS f2 
+LEFT JOIN salario AS s2 ON f2.id_fun = s2.id_fun
+WHERE f2.id_depart = f.id_depart -- Do mesmo departamento
+AND s2.Data_inicio = ( -- E que o salário (s2) seja o mais recente desse funcionário (f2), assume-se que a tendência natural é o maior salário ser sempre o mais recente
+SELECT MAX(s3.Data_inicio)
+FROM salario s3
+WHERE s3.id_fun = f2.id_fun
+    )
+)
+ORDER BY nome_departamento, salario_atual DESC;
+-------------------------------------------------------------------------------------------------------------------------------
+
+--21. Funcionários auferem salário mais de 1500 euros, têm um total de férias atribuidas entre 10 e 15, com numero de dependentes do sexo feminino
+SELECT 
+f.id_fun,
+f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+s.salario_liquido,
+-- distinct evita multiplicacao desnecessária entre tabelas com relações n:m entre elas
+SUM(DISTINCT fe.num_dias)  as ferias_aprovadas,
+COUNT(d.sexo) AS num_dep_Fem
+FROM funcionarios AS f 
+JOIN salario AS s 
+  ON f.id_fun = s.id_fun 
+JOIN ferias as fe 
+  ON f.id_fun = fe.id_fun
+JOIN dependentes AS d 
+  ON f.id_fun = d.id_fun 
+-- filtrar sexo feminino, salario liquido acima de 1550 euros e as férias aprovadas são as únicas contadas
+WHERE (d.sexo = 'Feminino' AND s.salario_liquido >1500 and fe.estado_aprov = 'Aprovado')
+GROUP BY f.id_fun,nome_completo, s.salario_liquido;
+-------------------------------------------------------------------------------------------------------------------------------
+
+--22. Média de dependentes femininos por departamento
+SELECT 
+d.nome,
+f.id_depart, 
+-- num_fem calculado abaixo, coalesce para cotar pessoas sem dependentes como zero, não como null
+COALESCE(AVG(dep.num_fem),0) AS media_fem
+-- subquery usada para da entidade dependentes ser filtrada apenas pessoas do sexo feminino e associar ao id_fun
+-- daqui se cria num_fem usado para calcular a média acima referida
+FROM (
+  SELECT 
+  id_fun, 
+  COUNT(*) AS num_fem
+  FROM dependentes
+  WHERE sexo = 'Feminino' 
+  GROUP BY id_fun
+) AS dep
+--  joins usados para associar id_depart e nome do departamento à média, agrupando-os com o group by
+-- right join, não apenas join, para garantir que mesmo departamentos sem dependentes femininos são incluídos  
+ RIGHT JOIN funcionarios AS f 
+  ON f.id_fun = dep.id_fun
+RIGHT JOIN departamentos as d 
+  ON d.id_depart = f.id_depart
+GROUP BY d.nome, f.id_depart;
+
+
+
+
+
+
+
+ANALYZE departamentos;
+ANALYZE funcionarios;
+EXPLAIN ANALYZE
+SELECT
+  d.nome,              -- nome do departamento
+  COUNT(f.id_fun) AS total_funcionarios -- número total de funcionários no departamento
+FROM departamentos AS d
+-- LEFT JOIN permite listar também departamentos sem funcionários
+LEFT JOIN funcionarios AS f 
+ON d.id_depart= f.id_depart
+-- agrupa os resultados por departamento para fazer a contagem corretamente
+GROUP BY d.nome
+ORDER BY total_funcionarios DESC;
