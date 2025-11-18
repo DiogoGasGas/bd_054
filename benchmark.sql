@@ -88,22 +88,49 @@ $$ LANGUAGE plpgsql;
 
 -- Daqui para a frente no documento vamos invocar a funnção para documentar os dados relevantes sobre as queries
 
-
-
+set search_path to benchmark_schema, public;
 
 SELECT run_benchmark(
-        'SELECT
-            f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
-            s.salario_bruto AS salario_bruto
-        FROM bd054_schema.funcionarios f
-        LEFT JOIN bd054_schema.salario s ON f.id_fun = s.id_fun
-        WHERE s.salario_bruto > (SELECT AVG(salario_bruto) FROM bd054_schema.salario)
-        AND s.data_inicio = (
-            SELECT MAX(s2.data_inicio)
-            FROM bd054_schema.salario s2
-            WHERE s2.id_fun = f.id_fun
-        )
-        ORDER BY salario_bruto DESC;',
+    'SELECT
+    f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
+    s.salario_bruto AS salario_bruto
+FROM bd054_schema.funcionarios f
+LEFT JOIN bd054_schema.salario s ON f.id_fun = s.id_fun
+WHERE s.salario_bruto > (
+    SELECT AVG(salario_bruto)
+    FROM bd054_schema.salario
+)
+AND s.data_inicio = (
+    SELECT MAX(s2.data_inicio)
+    FROM bd054_schema.salario s2
+    WHERE s2.id_fun = f.id_fun
+)
+ORDER BY salario_bruto DESC;',
+    'Q02',
+    'antes'
+
+);
+
+
+SELECT
+run_benchmark(
+        'SELECT 
+    d.nome, 
+    SUM(s.salario_bruto) AS tot_remun 
+FROM bd054_schema.departamentos AS d
+LEFT JOIN bd054_schema.funcionarios AS f 
+    ON d.id_depart = f.id_depart
+LEFT JOIN bd054_schema.salario AS s 
+    ON f.id_fun = s.id_fun
+WHERE s.data_inicio = (
+    SELECT MAX(s2.data_inicio)
+    FROM bd054_schema.salario s2
+    WHERE s2.id_fun = f.id_fun
+)
+GROUP BY d.nome
+ORDER BY tot_remun DESC;',
     'Q03',
     'antes'
 );
+
+
