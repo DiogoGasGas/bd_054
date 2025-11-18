@@ -82,3 +82,28 @@ VALUES(
 );
 END;
 $$ LANGUAGE plpgsql;
+
+-- ====================================================================================================================================================
+-- ====================================================================================================================================================
+
+-- Daqui para a frente no documento vamos invocar a funnção para documentar os dados relevantes sobre as queries
+
+
+
+
+SELECT run_benchmark(
+        'SELECT
+            f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
+            s.salario_bruto AS salario_bruto
+        FROM bd054_schema.funcionarios f
+        LEFT JOIN bd054_schema.salario s ON f.id_fun = s.id_fun
+        WHERE s.salario_bruto > (SELECT AVG(salario_bruto) FROM bd054_schema.salario)
+        AND s.data_inicio = (
+            SELECT MAX(s2.data_inicio)
+            FROM bd054_schema.salario s2
+            WHERE s2.id_fun = f.id_fun
+        )
+        ORDER BY salario_bruto DESC;',
+    'Q03',
+    'antes'
+);
