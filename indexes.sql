@@ -166,14 +166,7 @@ CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 --18
 CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
 
---19 
-CREATE INDEX hash_nome_completo ON funcionario USING hash((primeiro_nome || ' ' || ultimo_nome));
 
---20
-CREATE INDEX ind_primeiro_nome ON funcionario(primeiro_nome);
-
---21
-CREATE INDEX ind_ultimo_nome ON funcionario(ultimo_nome);
 
 
 
