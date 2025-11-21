@@ -194,6 +194,4 @@ DROP INDEX IF EXISTS datas_ferias;
 DROP INDEX IF EXISTS ind_nome_historico;
 DROP INDEX IF EXISTS ind_nome_formacao;
 DROP INDEX IF EXISTS idx_nome_completo;
-DROP INDEX IF EXISTS hash_nome_completo;
-DROP INDEX IF EXISTS ind_primeiro_nome;
-DROP INDEX IF EXISTS ind_ultimo_nome;
+-- =======================================================================================================================================================================================================================
