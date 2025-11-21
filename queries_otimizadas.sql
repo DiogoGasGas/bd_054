@@ -1,9 +1,32 @@
 set search_path to bd054_schema, public;
 
+ANALYZE funcionarios;
+ANALYZE departamentos;
+ANALYZE avaliacoes;
+ANALYZE beneficios;
+ANALYZE candidato_a;
+ANALYZE candidatos;
+ANALYZE dependentes;
+ANALYZE ferias;
+ANALYZE formacoes;
+ANALYZE faltas;
+ANALYZE historico_empresas;
+ANALYZE salario;
+ANALYZE remuneracoes;
+ANALYZE teve_formacao;
+ANALYZE vagas;
+ANALYZE permissoes;
+ANALYZE utilizadores;
+
+
+
+
+
 -- Querie 1 original
 ANALYZE departamentos;
 ANALYZE funcionarios;
 
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT
   d.nome,              -- nome do departamento
@@ -20,6 +43,8 @@ ORDER BY total_funcionarios DESC;
 ANALYZE departamentos;
 ANALYZE funcionarios;
 
+
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT
   d.nome,
@@ -39,6 +64,10 @@ ORDER BY total_funcionarios DESC;
 ANALYZE departamentos;
 ANALYZE funcionarios;
 
+
+
+
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT
   d.nome,
@@ -53,9 +82,12 @@ ORDER BY total_funcionarios DESC;
 
 -- Querie 2 original
 
+
+set search_path to bd054_schema, public;
 ANALYZE funcionarios;
 ANALYZE salario;
 
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -80,6 +112,7 @@ salario_bruto DESC;
 ANALYZE funcionarios;
 ANALYZE salario;
 
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT 
   f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -103,6 +136,8 @@ ANALYZE departamentos;
 ANALYZE funcionarios;
 ANALYZE salario;
 
+
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 SELECT d.nome, SUM(s.salario_bruto) AS tot_remun 
 FROM departamentos AS d
@@ -125,6 +160,8 @@ ANALYZE departamentos;
 ANALYZE funcionarios;
 ANALYZE salario;
 
+
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 WITH SalariosRecentes AS (
   -- 1. Encontra o salário mais recente para CADA funcionário em UM SÓ SCAN + SORT.
@@ -151,6 +188,10 @@ ORDER BY tot_remun DESC;
 
 --4. Top 3 funcionários com maior total de remuneração 
 -- Objetivo: listar os 3 funcionários com maior salário líquido de forma decrescente
+
+
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 s.salario_liquido AS salario_liquido
 FROM 
@@ -164,6 +205,26 @@ WHERE s2.id_fun = f.id_fun -- para este funcionário
 ORDER BY 
 salario_liquido DESC -- Ordena pelo salário atual
 LIMIT 3;
+
+
+
+-----Query 4 otimizada - Usando DISTINCT ON para evitar subquery por funcionário. Distinct on pega automaticamente o ultimo salário(muito rapido com o index que temos criado)~
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
+SELECT 
+    f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+    s.salario_liquido
+FROM funcionarios f
+JOIN (
+    SELECT DISTINCT ON (id_fun)
+           id_fun,
+           salario_liquido
+    FROM salario
+    ORDER BY id_fun, data_inicio DESC
+) s ON f.id_fun = s.id_fun
+ORDER BY s.salario_liquido DESC
+LIMIT 3;
+
 -------------------------------------------------------------------------------------
 
 --5. Média de férias por departamento 
@@ -178,6 +239,9 @@ JOIN ferias AS fer
 ON f.id_fun = fer.id_fun
 -- agrupa por departamento para calcular a média de férias de cada um
 GROUP BY d.nome;
+
+
+
 ------------------------------------------------------------------------------
 
 --6.Comparação com média global nas formações 
@@ -196,7 +260,9 @@ WHERE calcular_num_aderentes_formacao(f.id_for) >(
 ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
 -----------------------------------------------------------------------------
 
---7. funcionários com benificio do tipo 'Seguro Saúde' com prémio de benefícios acima da média 
+--7. funcionários com benificio do tipo 'Seguro Saúde' com prémio de benefícios acima da média
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE 
 SELECT 
 f.id_fun,
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -214,6 +280,32 @@ HAVING SUM(b.valor) > (
   WHERE tipo = 'Seguro Saúde'
 )
 ORDER BY f.id_fun ASC;
+
+
+-- query 7 otimizada
+/* Na query 7, agrupamos por primeiro_nome e ultimo_nome em vez de usar a expressão concatenada nome_completo,
+ o que reduz custo de processamento. Além disso, iniciamos o join pela tabela beneficios já filtrada pelo tipo,
+  diminuindo o volume de dados a processar antes da agregação. 
+*/
+
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
+SELECT 
+    f.id_fun,
+    f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+    SUM(b.valor) AS tot_benef
+FROM beneficios AS b
+JOIN funcionarios AS f 
+    ON f.id_fun = b.id_fun
+WHERE b.tipo = 'Seguro Saúde'
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome
+HAVING SUM(b.valor) > (
+    SELECT AVG(valor)
+    FROM beneficios
+    WHERE tipo = 'Seguro Saúde'
+)
+ORDER BY f.id_fun;
+
 ---------------------------------------------------------------------------------
 
 --8. Funcionário com mais dias de férias aprovadas

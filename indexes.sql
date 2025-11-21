@@ -163,11 +163,8 @@ CREATE INDEX ind_nome_historico ON historico_empresas(nome_empresa);
 CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 
 
---18
+--16
 CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
-
-
-
 
 
 
