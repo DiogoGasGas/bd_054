@@ -1,0 +1,20 @@
+SET search_path TO bd054_schema, public;
+
+Drop Table bd054_schema.Departamentos CASCADE;
+Drop Table bd054_schema.Funcionarios CASCADE;
+Drop Table bd054_schema.Remuneracoes CASCADE;
+Drop Table bd054_schema.Salario CASCADE;
+Drop Table bd054_schema.Beneficios CASCADE;
+Drop Table bd054_schema.Ferias CASCADE;
+Drop Table bd054_schema.Dependentes CASCADE;
+Drop Table bd054_schema.Faltas CASCADE;
+DROP TABLE bd054_schema.Historico_empresas CASCADE;
+Drop Table bd054_schema.Vagas CASCADE;
+Drop Table bd054_schema.Requisitos_vaga CASCADE;
+Drop Table bd054_schema.Candidatos CASCADE;
+Drop Table bd054_schema.Candidato_a CASCADE;
+DROP TABLE bd054_schema.Formacoes CASCADE;
+DROP TABLE bd054_schema.Teve_Formacao CASCADE;
+DROP TABLE bd054_schema.Avaliacoes CASCADE;
+DROP TABLE bd054_schema.Utilizadores CASCADE;
+DROP TABLE bd054_schema.Permissoes CASCADE;
