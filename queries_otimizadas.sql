@@ -59,14 +59,12 @@ LEFT JOIN (
 ) AS contagem ON d.id_depart = contagem.id_depart
 ORDER BY total_funcionarios DESC;
 
+-- ajuda um bocado 
 
 -- Otimização 2: Agrupamento por ID (Eficiência de Hash)
 
 ANALYZE departamentos;
 ANALYZE funcionarios;
-
-
-
 
 set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
@@ -78,6 +76,8 @@ LEFT JOIN funcionarios AS f ON d.id_depart = f.id_depart
 -- Agrupar pelo ID (inteiro) é computacionalmente mais barato que por Nome (texto)
 GROUP BY d.id_depart
 ORDER BY total_funcionarios DESC;
+
+-- também ajuda um bocado
 
 -------------------------------------------------------------------------
 
@@ -155,7 +155,7 @@ GROUP BY d.nome
 ORDER BY tot_remun DESC;
 
 
--- Querie 3 otimizada - Usando CTE para pré-selecionar salários recentes
+-- Querie 3 otimizada - Usando with para pré-selecionar salários recentes
 
 ANALYZE departamentos;
 ANALYZE funcionarios;
@@ -532,7 +532,7 @@ WHERE s_max.ID_fun = s_avg.ID_fun )
 ORDER BY Media_Salarial_Departamento DESC;
 
 
--- Querie 15 otimizada - Usando CTE para pré-selecionar salários recentes
+-- Querie 15 otimizada - Usando with para pré-selecionar salários recentes
 
 set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
@@ -675,6 +675,8 @@ O tempo total de execução de 0.267 ms confirma a eficiência da execução. */
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 20 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT f.id_fun, f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 sal.salario_bruto AS salario_atual,
 d.nome AS nome_departamento,
@@ -702,6 +704,42 @@ WHERE s3.id_fun = f2.id_fun
     )
 )
 ORDER BY nome_departamento, salario_atual DESC;
+
+-- Query 20 Otimizada
+
+EXPLAIN ANALYZE
+WITH SalariosAtuais AS (
+    -- Salário atual de cada pessoa
+    SELECT DISTINCT ON (id_fun) 
+        id_fun, salario_bruto, id_depart
+    FROM salario 
+    JOIN funcionarios USING (id_fun)
+    ORDER BY id_fun, data_inicio DESC
+),
+MediasPorDepartamento AS (
+    -- Média de cada departamento
+    SELECT id_depart, AVG(salario_bruto) AS media_dept
+    FROM SalariosAtuais
+    GROUP BY id_depart
+)
+SELECT 
+    f.id_fun,
+    f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+    sa.salario_bruto AS salario_atual,
+    d.nome AS nome_departamento,
+    (SELECT COUNT(*) FROM teve_formacao AS tf WHERE tf.id_fun = f.id_fun) AS num_formacoes
+FROM funcionarios AS f
+-- Juntamos o salário do funcionário
+JOIN SalariosAtuais AS sa ON f.id_fun = sa.id_fun
+-- Juntamos o nome do departamento
+JOIN departamentos AS d ON f.id_depart = d.id_depart
+-- Juntamos a média do departamento dele para comparar
+JOIN MediasPorDepartamento AS md ON f.id_depart = md.id_depart
+-- O filtro mágico: O salário dele é maior que a média do grupo dele?
+WHERE sa.salario_bruto > md.media_dept
+ORDER BY d.nome, sa.salario_bruto DESC;
+
+-- 10x mais rápido que o original!
 -------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 21 original
