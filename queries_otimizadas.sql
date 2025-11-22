@@ -743,6 +743,8 @@ ORDER BY d.nome, sa.salario_bruto DESC;
 -------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 21 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
 f.id_fun,
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -760,9 +762,19 @@ JOIN dependentes AS d
 -- filtrar sexo feminino, salario liquido acima de 1550 euros e as férias aprovadas são as únicas contadas
 WHERE (d.sexo = 'Feminino' AND s.salario_liquido >1500 and fe.estado_aprov = 'Aprovado')
 GROUP BY f.id_fun,nome_completo, s.salario_liquido;
+
+
+
+/* A query está bem otimizada.
+O tempo total de execução é baixo (1.476 ms) e os Nested Loops e Hash Joins processam poucas linhas, sem gargalos.
+Os filtros e índices (como ferias_pkey e salario) estão a ser usados eficientemente.
+Portanto, não há necessidade de alterar a query. */
+
 -------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 22 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
 d.nome,
 f.id_depart, 
@@ -785,6 +797,14 @@ FROM (
 RIGHT JOIN departamentos as d 
   ON d.id_depart = f.id_depart
 GROUP BY d.nome, f.id_depart;
+
+
+
+/* A query já estava bastante otimizada, no entanto criámos o índice parcial ind_dependentes_fem na tabela dependentes sobre a coluna id_fun com o filtro WHERE sexo = 'Feminino'.
+Este índice evita que a query tenha de ler as 1131 linhas que não interessam, acelerando bastante o acesso aos dependentes femininos.
+Com este índice, o HashAggregate que calcula a média feminina por departamento roda rápido e o custo de execução cai, mantendo a query eficiente mesmo com vários joins. */
+
+
 
 
 
