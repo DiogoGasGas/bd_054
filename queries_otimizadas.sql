@@ -369,6 +369,8 @@ Além disso, índices como o ind_fun_depart, ind_salario_fun_data e ind_avaliaca
 
 --10. Dependentes e funcionário respetivo 
 -- Objetivo: mostrar cada dependente com o respetivo funcionário titular e o departamento desse funcionário
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   f.id_fun, 
   f.primeiro_nome || ' '|| f.ultimo_nome AS nome_funcionario, -- id e nome do funcionário titular
@@ -382,6 +384,14 @@ JOIN departamentos AS dep
 ON f.id_depart = dep.id_depart
 GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome, dep.nome -- necessário devido ao string_agg
 ORDER BY nome_funcionario; -- orderna por ordem alfabética
+
+
+/* Embora o Hash Join (1,450 ms) e o Hash Aggregate (2,472 ms) tenham tempos de execução ligeiramente mais elevados que outros passos,
+estes valores são normais dado o número de linhas processadas (751 e 343 linhas, respetivamente).
+Os Seq Scans são rápidos e processam poucas linhas, e o Index Bitmap Scan no índice ind_tipo_beneficio acelera o filtro por tipo de benefício.
+Portanto, não existem gargalos significativos e podemos concluir que a query já está bem otimizada. Índices como ind_tipo_beneficio, 
+ind_fun_depart e ind_salario_fun_data ajudam a acelerar joins e filtros, contribuindo para a eficiência geral da execução.*/
+
 -----------------------------------------------------------------------------
 
 --11. Vagas 
