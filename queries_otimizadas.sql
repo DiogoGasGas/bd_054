@@ -631,6 +631,8 @@ ORDER BY taxa_adesao DESC;
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 19 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
     DISTINCT -- Previne duplicados se o funcionário trabalhou na 'Moura' 2x
     f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -661,6 +663,15 @@ JOIN beneficios AS b
 JOIN historico_empresas AS h 
     ON f.id_fun = h.id_fun 
     AND h.nome_empresa = 'Moura';
+
+
+
+/* Apesar de alguns Nested Loops mostrarem loops internos relativamente altos (por exemplo 11 ou 12),
+isso acontece porque cada loop interno é executado para cada linha do loop externo.
+No entanto, os tempos reais (actual time) são extremamente baixos, 
+portanto estes loops não representam gargalos.
+A query está bem otimizada, beneficiando-se de índices como ind_nome_historico, beneficios_pkey e remuneracoes_pkey.
+O tempo total de execução de 0.267 ms confirma a eficiência da execução. */
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 20 original
