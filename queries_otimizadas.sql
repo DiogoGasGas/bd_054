@@ -588,27 +588,13 @@ GROUP BY h.nome_empresa
 HAVING COUNT(f.id_fun) > 1;
 
 
--- Querie 16 otimizada
-set search_path to bd054_schema, public;
-EXPLAIN ANALYZE
+/* A query que agrega funcionários por empresa está bem otimizada.
+Todos os Seq Scans em `historico_empresas` e `funcionarios` processam poucas linhas e são rápidos,
+o Hash Join entre as tabelas é eficiente devido ao tamanho reduzido,
+e o HashAggregate que aplica o `GROUP BY` e o filtro do `HAVING` demora apenas cerca de 4 ms.
+Não há gargalos perceptíveis e, com os índices existentes, não há necessidade de otimização adicional. */
 
 
-WITH empresas_filtradas AS (
-SELECT
-h.nome_empresa,
-f.id_fun,
-f.primeiro_nome,
-f.ultimo_nome
-FROM historico_empresas AS h
-JOIN funcionarios AS f
-ON f.id_fun = h.id_fun
-)
-SELECT
-ef.nome_empresa,
-STRING_AGG(ef.primeiro_nome || ' ' || ef.ultimo_nome, ', ') AS funcionarios
-FROM empresas_filtradas ef
-GROUP BY ef.nome_empresa
-HAVING COUNT(ef.id_fun) > 1;
 
 
 ------------------------------------------------------------------------------------------
