@@ -1,5 +1,9 @@
 set search_path to benchmark_schema, public;
 
+
+SELECT * FROM benchmark_results;
+
+
 SELECT 
     query_name,
     etapa,
