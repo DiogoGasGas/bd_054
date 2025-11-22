@@ -166,11 +166,15 @@ CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 
 
 --16
-CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
+CREATE INDEX ind_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
 
 
 --17
-CREATE INDEX idx_ferias_estado_numdias_desc ON ferias(estado_aprov, num_dias DESC);
+CREATE INDEX ind_ferias_estado_numdias_desc ON ferias(estado_aprov, num_dias DESC);
+
+
+--18
+CREATE INDEX ind_hist_emp_idfun_nome ON historico_empresas(id_fun, nome_empresa);
 
 
 
@@ -194,6 +198,7 @@ DROP INDEX IF EXISTS ind_avaliacao_num;
 DROP INDEX IF EXISTS datas_ferias;
 DROP INDEX IF EXISTS ind_nome_historico;
 DROP INDEX IF EXISTS ind_nome_formacao;
-DROP INDEX IF EXISTS idx_nome_completo;
-DROP INDEX IF EXISTS idx_ferias_estado_numdias_desc; 
+DROP INDEX IF EXISTS ind_nome_completo;
+DROP INDEX IF EXISTS ind_ferias_estado_numdias_desc;
+DROP INDEX IF EXISTS ind_hist_emp_idfun_nome; 
 -- =======================================================================================================================================================================================================================

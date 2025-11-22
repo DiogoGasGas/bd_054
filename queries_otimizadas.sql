@@ -249,6 +249,7 @@ ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
 
 
 -- Query 6 Otimizada
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 WITH ContagemAderentes AS (
     -- 1. Pré-calculamos quantos aderentes tem CADA formação
@@ -531,7 +532,7 @@ WHERE s_max.ID_fun = s_avg.ID_fun )
 ORDER BY Media_Salarial_Departamento DESC;
 
 
-
+-- Querie 15 otimizada - Usando CTE para pré-selecionar salários recentes
 
 set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
@@ -572,6 +573,8 @@ tornando a query muito mais eficiente. */
 ---------------------------------------------
 
 -- Querie 16 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
   h.nome_empresa, 
   -- agrega os nomes completos dos funcionários que trabalharam nessa empresa
@@ -583,6 +586,17 @@ JOIN funcionarios AS f
 GROUP BY h.nome_empresa
 -- mantém apenas as empresas com mais de um funcionário, ou seja, onde pelo menos dois já trabalharam
 HAVING COUNT(f.id_fun) > 1;
+
+
+/* A query que agrega funcionários por empresa está bem otimizada.
+Todos os Seq Scans em `historico_empresas` e `funcionarios` processam poucas linhas e são rápidos,
+o Hash Join entre as tabelas é eficiente devido ao tamanho reduzido,
+e o HashAggregate que aplica o `GROUP BY` e o filtro do `HAVING` demora apenas cerca de 4 ms.
+Não há gargalos perceptíveis e, com os índices existentes, não há necessidade de otimização adicional. */
+
+
+
+
 ------------------------------------------------------------------------------------------
 
 -- Querie 17 original
