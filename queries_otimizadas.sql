@@ -396,6 +396,8 @@ ind_fun_depart e ind_salario_fun_data ajudam a acelerar joins e filtros, contrib
 
 --11. Vagas 
 -- Objetivo: calcular a média de candidatos por departamento, com o número de vagas em cada departamento
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   dep.id_depart,
   dep.nome AS nome_depart,                        -- departamento
@@ -419,6 +421,15 @@ ON cand_a.id_vaga = v.id_vaga
 GROUP BY dep.id_depart, dep.nome 
 -- ordena para ver primeiro os departamentos com maior média de candidatos
 ORDER BY media_candidatos DESC;
+
+
+/* Nesta query, todos os Seq Scans (departamentos, vagas, candidato_a) processam poucas linhas e são extremamente rápidos (menos de 0,2 ms).
+Os Hash Joins e Hash Aggregates também têm tempos de execução baixos (máximo 0,510 ms), 
+mesmo incluindo a subquery que agrega o número de candidatos por vaga.
+O Sort final processa apenas 8 linhas, portanto é insignificante em termos de custo.
+Com base nestes valores, podemos concluir que a query já está bem otimizada. A presença de índices sobre chaves de join,
+como ind_fun_depart ou índices sobre id_depart e id_vaga, contribui para acelerar os joins e agregações.*/
+
 ---------------------------------------------------------------------------------------
 
 --12. Número de dependentes 
