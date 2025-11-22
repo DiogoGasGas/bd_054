@@ -319,7 +319,10 @@ ORDER BY f.id_fun;
 
 ---------------------------------------------------------------------------------
 
--- Querie 8 original.
+--8. Funcionário com mais dias de férias aprovadas
+-- Objetivo: identificar o/os funcionário com mais dias de férias
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   f.id_fun,
   f.primeiro_nome,        -- nome do funcionário
@@ -334,9 +337,17 @@ WHERE fer.num_dias = (
   WHERE estado_aprov = 'Aprovado'
 )
 ORDER BY f.id_fun;
+
+/* Como o Index Only Scan sobre o índice idx_ferias_estado_numdias_desc retorna rapidamente a maior quantidade de dias de férias aprovadas,
+e como o Hash Join com a tabela funcionarios processa poucas linhas em milissegundos, podemos concluir que a query já está bem otimizada.
+Além disso, o índice idx_ferias_estado_numdias_desc ajuda a acelerar tanto a filtragem pelo estado aprovado quanto a seleção do máximo num_dias,
+garantindo uma execução eficiente da query. */
+
 --------------------------------------------------------------------------------------------
 
--- Querie 9 original. 
+--9.  Departamentos com média salarial acima da média salarial geral, com a média de avaliação 
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   d.nome AS nome_depart,            -- nome do departamento
   COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
@@ -356,9 +367,18 @@ HAVING AVG(s.salario_bruto) > (
   FROM salario
 )
 ORDER BY media_aval DESC;
+
+
+/*Como todos os seq scans estão a processar poucas linhas e como os hash joins e hash aggregantes também estão a ser rápidos (menos de 2 ms),
+podemos concluir que a query já está bem otimizada. 
+Além disso, índices como o ind_fun_depart, ind_salario_fun_data e ind_avaliacao_num ajudam a acelerar os joins e filtros o que já otimiza a query.
+*/
 ----------------------------------------------------------------------
 
--- Querie 10 original
+--10. Dependentes e funcionário respetivo 
+-- Objetivo: mostrar cada dependente com o respetivo funcionário titular e o departamento desse funcionário
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   f.id_fun, 
   f.primeiro_nome || ' '|| f.ultimo_nome AS nome_funcionario, -- id e nome do funcionário titular
@@ -372,9 +392,20 @@ JOIN departamentos AS dep
 ON f.id_depart = dep.id_depart
 GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome, dep.nome -- necessário devido ao string_agg
 ORDER BY nome_funcionario; -- orderna por ordem alfabética
+
+
+/* Embora o Hash Join (1,450 ms) e o Hash Aggregate (2,472 ms) tenham tempos de execução ligeiramente mais elevados que outros passos,
+estes valores são normais dado o número de linhas processadas (751 e 343 linhas, respetivamente).
+Os Seq Scans são rápidos e processam poucas linhas, e o Index Bitmap Scan no índice ind_tipo_beneficio acelera o filtro por tipo de benefício.
+Portanto, não existem gargalos significativos e podemos concluir que a query já está bem otimizada. Índices como ind_tipo_beneficio, 
+ind_fun_depart e ind_salario_fun_data ajudam a acelerar joins e filtros, contribuindo para a eficiência geral da execução.*/
+
 -----------------------------------------------------------------------------
 
--- Querie 11 original
+--11. Vagas 
+-- Objetivo: calcular a média de candidatos por departamento, com o número de vagas em cada departamento
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   dep.id_depart,
   dep.nome AS nome_depart,                        -- departamento
@@ -398,9 +429,21 @@ ON cand_a.id_vaga = v.id_vaga
 GROUP BY dep.id_depart, dep.nome 
 -- ordena para ver primeiro os departamentos com maior média de candidatos
 ORDER BY media_candidatos DESC;
+
+
+/* Nesta query, todos os Seq Scans (departamentos, vagas, candidato_a) processam poucas linhas e são extremamente rápidos (menos de 0,2 ms).
+Os Hash Joins e Hash Aggregates também têm tempos de execução baixos (máximo 0,510 ms), 
+mesmo incluindo a subquery que agrega o número de candidatos por vaga.
+O Sort final processa apenas 8 linhas, portanto é insignificante em termos de custo.
+Com base nestes valores, podemos concluir que a query já está bem otimizada. A presença de índices sobre chaves de join,
+como ind_fun_depart ou índices sobre id_depart e id_vaga, contribui para acelerar os joins e agregações.*/
+
 ---------------------------------------------------------------------------------------
 
--- Querie 12 original
+--12. Número de dependentes 
+-- Objetivo: Número de dependentes de cada funcionário
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT f.id_fun,f.primeiro_nome, 
   COUNT(d.id_fun) AS num_dependentes  
 FROM funcionarios As f
@@ -408,9 +451,21 @@ LEFT JOIN dependentes AS d
   ON f.id_fun = d.id_fun  -- criar tabela incluindo todos os funcionários associando aos dependentes
 GROUP BY f.id_fun, f.primeiro_nome
 ORDER BY num_dependentes desc;  
+
+
+/* Nesta query, os Seq Scans sobre funcionarios e dependentes processam poucas linhas e são muito rápidos (menos de 0,4 ms).
+O Hash Right Join e o HashAggregate também têm tempos de execução baixos (1,367 ms e 2,059 ms, respetivamente) 
+e lidam com menos de 2000 linhas, o que indica que não há gargalos significativos.
+O Sort final processa apenas 1000 linhas, com tempo de 2,392 ms, o que é aceitável dado o volume.
+Portanto, podemos concluir que a query já está otimizada. 
+Índices como ind_fun_depart e ind_parentesco_dependentes ajudam a acelerar os joins e a agregação, 
+embora neste caso o ganho seja marginal devido ao pequeno número de linhas.*/
+
 ------------------------------------------------------------------------------------
 
--- Querie 13 original
+--13. Funcionário que não fizeram auto-avaliação
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
     f.primeiro_nome,
     f.ultimo_nome,
@@ -422,7 +477,10 @@ JOIN avaliacoes AS av
 WHERE av.autoavaliacao IS NULL;
 ------------------------------------------------------------------------------------
 
--- Querie 14 original
+--14. Numero de faltas e faltas justificadas por departamento
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
+SELECT 
     d.id_depart,
     d.nome,
     COUNT(fal.id_fun) AS total_faltas, -- contar as faltas dos funcionarios
@@ -436,6 +494,14 @@ LEFT JOIN faltas AS fal
   ON f.id_fun = fal.id_fun
 GROUP BY d.nome, d.id_depart
 ORDER BY total_faltas DESC;
+
+/* Apesar de o HashAggregate (~3,1 ms) e o Hash Right Join (~2,6 ms) apresentarem tempos ligeiramente mais altos, 
+eles processam um número reduzido de linhas (8 e 2803, respetivamente) e não envolvem loops adicionais.
+Portanto, a query já está bem otimizada para o volume atual de dados.
+Índices como ind_fun_depart e ind_justificacao_faltas ajudam a acelerar os joins e os filtros, 
+garantindo que mesmo operações de agregação e contagem são rápidas.
+O Sort final também processa poucas linhas, não representando gargalo. */
+
 ---------------------------------------------
 
 -- Querie 15 original

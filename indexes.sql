@@ -169,7 +169,8 @@ CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
 
 
-
+--17
+CREATE INDEX idx_ferias_estado_numdias_desc ON ferias(estado_aprov, num_dias DESC);
 
 
 
@@ -194,4 +195,5 @@ DROP INDEX IF EXISTS datas_ferias;
 DROP INDEX IF EXISTS ind_nome_historico;
 DROP INDEX IF EXISTS ind_nome_formacao;
 DROP INDEX IF EXISTS idx_nome_completo;
+DROP INDEX IF EXISTS idx_ferias_estado_numdias_desc; 
 -- =======================================================================================================================================================================================================================
