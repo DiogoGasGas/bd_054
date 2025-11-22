@@ -329,9 +329,17 @@ WHERE fer.num_dias = (
   WHERE estado_aprov = 'Aprovado'
 )
 ORDER BY f.id_fun;
+
+/* Como o Index Only Scan sobre o índice idx_ferias_estado_numdias_desc retorna rapidamente a maior quantidade de dias de férias aprovadas,
+e como o Hash Join com a tabela funcionarios processa poucas linhas em milissegundos, podemos concluir que a query já está bem otimizada.
+Além disso, o índice idx_ferias_estado_numdias_desc ajuda a acelerar tanto a filtragem pelo estado aprovado quanto a seleção do máximo num_dias,
+garantindo uma execução eficiente da query. */
+
 --------------------------------------------------------------------------------------------
 
 --9.  Departamentos com média salarial acima da média salarial geral, com a média de avaliação 
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   d.nome AS nome_depart,            -- nome do departamento
   COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
@@ -351,6 +359,12 @@ HAVING AVG(s.salario_bruto) > (
   FROM salario
 )
 ORDER BY media_aval DESC;
+
+
+/*Como todos os seq scans estão a processar poucas linhas e como os hash joins e hash aggregantes também estão a ser rápidos (menos de 2 ms),
+podemos concluir que a query já está bem otimizada. 
+Além disso, índices como o ind_fun_depart, ind_salario_fun_data e ind_avaliacao_num ajudam a acelerar os joins e filtros o que já otimiza a query.
+*/
 ----------------------------------------------------------------------
 
 --10. Dependentes e funcionário respetivo 
