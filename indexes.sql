@@ -18,6 +18,8 @@ As queries 1,3,5,9,10,11,15,18,22 serão melhoradas devido aos JOINs que usam do
 as tabelas funcionarios e departamentos. 
 */
 
+  
+set search_path to bd054_schema, public;
 CREATE INDEX ind_fun_depart ON funcionarios(id_depart);
 
 
@@ -152,7 +154,7 @@ Otimiza buscas que filtrem ou usem ORDER BY por datas de início e fim das féri
 As queries 5,8,21 serão afetadas indiretamente, caso haja necessidade de filtros ou ordenações por estas datas.
 */
 
-CREATE INDEX datas_ferias ON ferias(data_inico, data_fim);
+CREATE INDEX datas_ferias ON ferias(data_inicio, data_fim);
 
 
 --14
@@ -175,6 +177,7 @@ CREATE INDEX idx_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_
 -- sugestoes a fazer , historico de empresas, formacoes, nome do funcionario
 ------------------------------------------------------
 
+set search_path to bd054_schema, public;
 DROP INDEX IF EXISTS ind_fun_depart;
 DROP INDEX IF EXISTS ind_nome_depart;
 DROP INDEX IF EXISTS ind_salario_bruto;
