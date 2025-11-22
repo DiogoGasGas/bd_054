@@ -735,6 +735,8 @@ Portanto, não há necessidade de alterar a query. */
 -------------------------------------------------------------------------------------------------------------------------------
 
 -- Querie 22 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
 d.nome,
 f.id_depart, 
@@ -757,6 +759,14 @@ FROM (
 RIGHT JOIN departamentos as d 
   ON d.id_depart = f.id_depart
 GROUP BY d.nome, f.id_depart;
+
+
+
+/* A query já estava bastante otimizada, no entanto criámos o índice parcial ind_dependentes_fem na tabela dependentes sobre a coluna id_fun com o filtro WHERE sexo = 'Feminino'.
+Este índice evita que a query tenha de ler as 1131 linhas que não interessam, acelerando bastante o acesso aos dependentes femininos.
+Com este índice, o HashAggregate que calcula a média feminina por departamento roda rápido e o custo de execução cai, mantendo a query eficiente mesmo com vários joins. */
+
+
 
 
 

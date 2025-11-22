@@ -176,6 +176,10 @@ CREATE INDEX ind_ferias_estado_numdias_desc ON ferias(estado_aprov, num_dias DES
 --18
 CREATE INDEX ind_hist_emp_idfun_nome ON historico_empresas(id_fun, nome_empresa);
 
+--19
+CREATE INDEX ind_dependentes_fem ON dependentes(id_fun) WHERE sexo = 'Feminino';
+
+
 
 
 
@@ -201,4 +205,5 @@ DROP INDEX IF EXISTS ind_nome_formacao;
 DROP INDEX IF EXISTS ind_nome_completo;
 DROP INDEX IF EXISTS ind_ferias_estado_numdias_desc;
 DROP INDEX IF EXISTS ind_hist_emp_idfun_nome; 
+DROP INDEX IF EXISTS ind_dependentes_fem;
 -- =======================================================================================================================================================================================================================
