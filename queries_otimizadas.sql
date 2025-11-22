@@ -313,6 +313,8 @@ ORDER BY f.id_fun;
 
 --8. Funcionário com mais dias de férias aprovadas
 -- Objetivo: identificar o/os funcionário com mais dias de férias
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   f.id_fun,
   f.primeiro_nome,        -- nome do funcionário
