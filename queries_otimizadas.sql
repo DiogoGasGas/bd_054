@@ -434,6 +434,8 @@ como ind_fun_depart ou índices sobre id_depart e id_vaga, contribui para aceler
 
 --12. Número de dependentes 
 -- Objetivo: Número de dependentes de cada funcionário
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT f.id_fun,f.primeiro_nome, 
   COUNT(d.id_fun) AS num_dependentes  
 FROM funcionarios As f
@@ -441,9 +443,21 @@ LEFT JOIN dependentes AS d
   ON f.id_fun = d.id_fun  -- criar tabela incluindo todos os funcionários associando aos dependentes
 GROUP BY f.id_fun, f.primeiro_nome
 ORDER BY num_dependentes desc;  
+
+
+/* Nesta query, os Seq Scans sobre funcionarios e dependentes processam poucas linhas e são muito rápidos (menos de 0,4 ms).
+O Hash Right Join e o HashAggregate também têm tempos de execução baixos (1,367 ms e 2,059 ms, respetivamente) 
+e lidam com menos de 2000 linhas, o que indica que não há gargalos significativos.
+O Sort final processa apenas 1000 linhas, com tempo de 2,392 ms, o que é aceitável dado o volume.
+Portanto, podemos concluir que a query já está otimizada. 
+Índices como ind_fun_depart e ind_parentesco_dependentes ajudam a acelerar os joins e a agregação, 
+embora neste caso o ganho seja marginal devido ao pequeno número de linhas.*/
+
 ------------------------------------------------------------------------------------
 
 --13. Funcionário que não fizeram auto-avaliação
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
     f.primeiro_nome,
     f.ultimo_nome,
@@ -456,6 +470,8 @@ WHERE av.autoavaliacao IS NULL;
 ------------------------------------------------------------------------------------
 
 --14. Numero de faltas e faltas justificadas por departamento
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
     d.id_depart,
     d.nome,
@@ -470,6 +486,14 @@ LEFT JOIN faltas AS fal
   ON f.id_fun = fal.id_fun
 GROUP BY d.nome, d.id_depart
 ORDER BY total_faltas DESC;
+
+/* Apesar de o HashAggregate (~3,1 ms) e o Hash Right Join (~2,6 ms) apresentarem tempos ligeiramente mais altos, 
+eles processam um número reduzido de linhas (8 e 2803, respetivamente) e não envolvem loops adicionais.
+Portanto, a query já está bem otimizada para o volume atual de dados.
+Índices como ind_fun_depart e ind_justificacao_faltas ajudam a acelerar os joins e os filtros, 
+garantindo que mesmo operações de agregação e contagem são rápidas.
+O Sort final também processa poucas linhas, não representando gargalo. */
+
 ---------------------------------------------
 
 --15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
