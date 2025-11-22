@@ -39,6 +39,7 @@ ON d.id_depart= f.id_depart
 GROUP BY d.nome
 ORDER BY total_funcionarios DESC;
 
+
 -- Otimização 1: Pré-agragação (A mais impactante)
 ANALYZE departamentos;
 ANALYZE funcionarios;
@@ -186,11 +187,13 @@ ORDER BY tot_remun DESC;
 
 ------------------------------------------------------------------------------------
 
---4. Top 3 funcionários com maior total de remuneração 
--- Objetivo: listar os 3 funcionários com maior salário líquido de forma decrescente
-
+--4. Querie 4 original
 
 set search_path to bd054_schema, public;
+
+ANALYZE funcionarios;
+ANALYZE salario;
+
 EXPLAIN ANALYZE
 SELECT f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 s.salario_liquido AS salario_liquido
