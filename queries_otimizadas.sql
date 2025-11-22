@@ -228,28 +228,13 @@ JOIN (
 ORDER BY s.salario_liquido DESC
 LIMIT 3;
 
--------------------------------------------------------------------------------------
-
---5. Média de férias por departamento 
--- Objetivo: calcular a média de dias de férias dos funcionários em cada departamento
-SELECT
-  d.nome,                    -- nome do departamento
-  ROUND(AVG(fer.num_dias),0) AS media_dias_ferias      -- média de dias de férias no departamento, arredondada para o inteiro mais proximo
-FROM departamentos AS d
-JOIN funcionarios AS f 
-ON d.id_depart = f.id_depart
-JOIN ferias AS fer 
-ON f.id_fun = fer.id_fun
--- agrupa por departamento para calcular a média de férias de cada um
-GROUP BY d.nome;
-
-
 
 ------------------------------------------------------------------------------
 
---6.Comparação com média global nas formações 
--- Objetivo: listar formações cujo número de aderentes está acima da média de todas as formações
--- é usada a funcao calcular_num_aderentes_formacao para este efeito
+-- Querie 6 original
+
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT
   f.id_for,
   f.nome_formacao,
@@ -261,9 +246,32 @@ WHERE calcular_num_aderentes_formacao(f.id_for) >(
   FROM formacoes
 )
 ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
+
+
+-- Query 6 Otimizada
+EXPLAIN ANALYZE
+WITH ContagemAderentes AS (
+    -- 1. Pré-calculamos quantos aderentes tem CADA formação
+    SELECT id_for, COUNT(id_fun) AS num_aderentes
+    FROM teve_formacao
+    GROUP BY id_for
+)
+SELECT
+  f.id_for,
+  f.nome_formacao,
+  c.num_aderentes
+FROM formacoes AS f
+JOIN ContagemAderentes AS c ON f.id_for = c.id_for
+WHERE c.num_aderentes > (
+    -- 2. Calculamos a média global aqui.
+    -- Como não depende de 'f' nem 'c', o SQL calcula isto só uma vez e reutiliza.
+    SELECT AVG(num_aderentes) FROM ContagemAderentes
+)
+ORDER BY c.num_aderentes DESC;
+
 -----------------------------------------------------------------------------
 
---7. funcionários com benificio do tipo 'Seguro Saúde' com prémio de benefícios acima da média
+-- Querie 7 original. 
 set search_path to bd054_schema, public;
 EXPLAIN ANALYZE 
 SELECT 
@@ -311,8 +319,7 @@ ORDER BY f.id_fun;
 
 ---------------------------------------------------------------------------------
 
---8. Funcionário com mais dias de férias aprovadas
--- Objetivo: identificar o/os funcionário com mais dias de férias
+-- Querie 8 original.
 SELECT
   f.id_fun,
   f.primeiro_nome,        -- nome do funcionário
@@ -329,7 +336,7 @@ WHERE fer.num_dias = (
 ORDER BY f.id_fun;
 --------------------------------------------------------------------------------------------
 
---9.  Departamentos com média salarial acima da média salarial geral, com a média de avaliação 
+-- Querie 9 original. 
 SELECT
   d.nome AS nome_depart,            -- nome do departamento
   COALESCE(AVG(a.avaliacao_numerica),0) AS media_aval, -- média da pontuação de avaliação dos funcionários do departamento, o null conta como 0
@@ -351,8 +358,7 @@ HAVING AVG(s.salario_bruto) > (
 ORDER BY media_aval DESC;
 ----------------------------------------------------------------------
 
---10. Dependentes e funcionário respetivo 
--- Objetivo: mostrar cada dependente com o respetivo funcionário titular e o departamento desse funcionário
+-- Querie 10 original
 SELECT
   f.id_fun, 
   f.primeiro_nome || ' '|| f.ultimo_nome AS nome_funcionario, -- id e nome do funcionário titular
@@ -368,8 +374,7 @@ GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome, dep.nome -- necessário devid
 ORDER BY nome_funcionario; -- orderna por ordem alfabética
 -----------------------------------------------------------------------------
 
---11. Vagas 
--- Objetivo: calcular a média de candidatos por departamento, com o número de vagas em cada departamento
+-- Querie 11 original
 SELECT
   dep.id_depart,
   dep.nome AS nome_depart,                        -- departamento
@@ -395,8 +400,7 @@ GROUP BY dep.id_depart, dep.nome
 ORDER BY media_candidatos DESC;
 ---------------------------------------------------------------------------------------
 
---12. Número de dependentes 
--- Objetivo: Número de dependentes de cada funcionário
+-- Querie 12 original
 SELECT f.id_fun,f.primeiro_nome, 
   COUNT(d.id_fun) AS num_dependentes  
 FROM funcionarios As f
@@ -406,7 +410,7 @@ GROUP BY f.id_fun, f.primeiro_nome
 ORDER BY num_dependentes desc;  
 ------------------------------------------------------------------------------------
 
---13. Funcionário que não fizeram auto-avaliação
+-- Querie 13 original
 SELECT 
     f.primeiro_nome,
     f.ultimo_nome,
@@ -418,8 +422,7 @@ JOIN avaliacoes AS av
 WHERE av.autoavaliacao IS NULL;
 ------------------------------------------------------------------------------------
 
---14. Numero de faltas e faltas justificadas por departamento
-SELECT 
+-- Querie 14 original
     d.id_depart,
     d.nome,
     COUNT(fal.id_fun) AS total_faltas, -- contar as faltas dos funcionarios
@@ -435,7 +438,7 @@ GROUP BY d.nome, d.id_depart
 ORDER BY total_faltas DESC;
 ---------------------------------------------
 
---15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
+-- Querie 15 original
 SELECT d.Nome, COUNT(f.ID_fun) AS Numero_Funcionarios,
 AVG(s.salario_bruto) AS Media_Salarial_Departamento
 FROM departamentos AS d
@@ -460,7 +463,7 @@ WHERE s_max.ID_fun = s_avg.ID_fun )
 ORDER BY Media_Salarial_Departamento DESC;
 ---------------------------------------------
 
---16. Funcionários que já trabalharam na mesma empresa
+-- Querie 16 original
 SELECT 
   h.nome_empresa, 
   -- agrega os nomes completos dos funcionários que trabalharam nessa empresa
@@ -474,7 +477,7 @@ GROUP BY h.nome_empresa
 HAVING COUNT(f.id_fun) > 1;
 ------------------------------------------------------------------------------------------
 
---17. Funcionários sem faltas registadas
+-- Querie 17 original
 SELECT 
   f.id_fun,
   f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -488,7 +491,7 @@ HAVING COUNT(fal.data) = 0
 ORDER BY f.id_fun;
 ------------------------------------------------------------------------------------------
 
---18. Taxa de aderência a formações por departamento
+-- Querie 18 original
 SELECT 
     d.nome,
     ROUND((COUNT(DISTINCT teve.id_fun)::decimal / calcular_num_funcionarios_departamento(d.id_depart)::decimal) * 100, 2) AS taxa_adesao
@@ -505,7 +508,7 @@ GROUP BY d.nome, d.id_depart
 ORDER BY taxa_adesao DESC;
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---19. Funcionários trabalharam na empresa Moura, auferem atualmente mais de 1500 euros brutos e têm seguro de saúde
+-- Querie 19 original
 SELECT
     DISTINCT -- Previne duplicados se o funcionário trabalhou na 'Moura' 2x
     f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -514,7 +517,6 @@ SELECT
     h.nome_empresa AS trabalhou_em -- Esta coluna será sempre 'Moura'
 FROM 
     funcionarios AS f
-
 -- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE, assumindo que num funcionamento normal de uma empresa, o salário mais alto seja o mais recente
 JOIN remuneracoes AS r 
     ON f.id_fun = r.id_fun
@@ -523,26 +525,23 @@ JOIN remuneracoes AS r
         FROM remuneracoes r2 
         WHERE r2.id_fun = f.id_fun
     )
-
 -- 2. Verifica o SALÁRIO para ESSE período
 JOIN salario AS s 
     ON r.id_fun = s.id_fun 
     AND r.Data_inicio = s.Data_inicio -- Garante que é do período recente
     AND s.salario_bruto > 1500        -- Aplica o filtro do salário
-
 -- 3. Verifica o BENEFÍCIO para ESSE período
 JOIN beneficios AS b
     ON r.id_fun = b.id_fun 
     AND r.Data_inicio = b.Data_inicio -- Garante que é do período recente
     AND b.tipo = 'Seguro Saúde'       -- Aplica o filtro do benefício
-
 -- 4. Verifica o HISTÓRICO (em qualquer altura)
 JOIN historico_empresas AS h 
     ON f.id_fun = h.id_fun 
     AND h.nome_empresa = 'Moura';
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
+-- Querie 20 original
 SELECT f.id_fun, f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
 sal.salario_bruto AS salario_atual,
 d.nome AS nome_departamento,
@@ -572,7 +571,7 @@ WHERE s3.id_fun = f2.id_fun
 ORDER BY nome_departamento, salario_atual DESC;
 -------------------------------------------------------------------------------------------------------------------------------
 
---21. Funcionários auferem salário mais de 1500 euros, têm um total de férias atribuidas entre 10 e 15, com numero de dependentes do sexo feminino
+-- Querie 21 original
 SELECT 
 f.id_fun,
 f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
@@ -592,7 +591,7 @@ WHERE (d.sexo = 'Feminino' AND s.salario_liquido >1500 and fe.estado_aprov = 'Ap
 GROUP BY f.id_fun,nome_completo, s.salario_liquido;
 -------------------------------------------------------------------------------------------------------------------------------
 
---22. Média de dependentes femininos por departamento
+-- Querie 22 original
 SELECT 
 d.nome,
 f.id_depart, 
