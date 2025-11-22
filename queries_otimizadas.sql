@@ -249,6 +249,7 @@ ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
 
 
 -- Query 6 Otimizada
+set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
 WITH ContagemAderentes AS (
     -- 1. Pré-calculamos quantos aderentes tem CADA formação
@@ -531,7 +532,7 @@ WHERE s_max.ID_fun = s_avg.ID_fun )
 ORDER BY Media_Salarial_Departamento DESC;
 
 
-
+-- Querie 15 otimizada - Usando CTE para pré-selecionar salários recentes
 
 set search_path to bd054_schema, public;
 EXPLAIN ANALYZE
@@ -572,6 +573,8 @@ tornando a query muito mais eficiente. */
 ---------------------------------------------
 
 -- Querie 16 original
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT 
   h.nome_empresa, 
   -- agrega os nomes completos dos funcionários que trabalharam nessa empresa
@@ -583,6 +586,31 @@ JOIN funcionarios AS f
 GROUP BY h.nome_empresa
 -- mantém apenas as empresas com mais de um funcionário, ou seja, onde pelo menos dois já trabalharam
 HAVING COUNT(f.id_fun) > 1;
+
+
+-- Querie 16 otimizada
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
+
+
+WITH empresas_filtradas AS (
+SELECT
+h.nome_empresa,
+f.id_fun,
+f.primeiro_nome,
+f.ultimo_nome
+FROM historico_empresas AS h
+JOIN funcionarios AS f
+ON f.id_fun = h.id_fun
+)
+SELECT
+ef.nome_empresa,
+STRING_AGG(ef.primeiro_nome || ' ' || ef.ultimo_nome, ', ') AS funcionarios
+FROM empresas_filtradas ef
+GROUP BY ef.nome_empresa
+HAVING COUNT(ef.id_fun) > 1;
+
+
 ------------------------------------------------------------------------------------------
 
 -- Querie 17 original
