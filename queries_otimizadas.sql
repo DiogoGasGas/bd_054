@@ -497,6 +497,8 @@ O Sort final também processa poucas linhas, não representando gargalo. */
 ---------------------------------------------
 
 --15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
 SELECT d.Nome, COUNT(f.ID_fun) AS Numero_Funcionarios,
 AVG(s.salario_bruto) AS Media_Salarial_Departamento
 FROM departamentos AS d
@@ -519,6 +521,46 @@ FROM Salario s_max
 WHERE s_max.ID_fun = s_avg.ID_fun )
 )
 ORDER BY Media_Salarial_Departamento DESC;
+
+
+
+
+set search_path to bd054_schema, public;
+EXPLAIN ANALYZE
+WITH salario_atual AS (
+    SELECT s1.id_fun, s1.salario_bruto
+    FROM salario s1
+    JOIN (
+        SELECT id_fun, MAX(data_inicio) AS max_data
+        FROM salario
+        GROUP BY id_fun
+    ) s2
+    ON s1.id_fun = s2.id_fun AND s1.data_inicio = s2.max_data
+)
+SELECT 
+    d.nome, 
+    COUNT(f.id_fun) AS numero_funcionarios,
+    AVG(sa.salario_bruto) AS media_salarial_departamento
+FROM departamentos d
+LEFT JOIN funcionarios f ON d.id_depart = f.id_depart
+LEFT JOIN salario_atual sa ON f.id_fun = sa.id_fun
+GROUP BY d.nome
+HAVING AVG(sa.salario_bruto) > (
+    SELECT AVG(salario_bruto)
+    FROM salario_atual
+)
+ORDER BY media_salarial_departamento DESC;
+
+
+/* Com o CTE, pré-filtramos os salários mais recentes, evitando subqueries repetidas dentro do WHERE. 
+Substituímos o Nested Loop por Hash Joins e Hash Aggregates, o que acelera os joins e a agregação. 
+Os índices como `ind_salario_fun_data` e `ind_fun_depart` ajudam a buscar rapidamente salários e funcionários, 
+tornando a query muito mais eficiente. */
+
+
+
+
+
 ---------------------------------------------
 
 --16. Funcionários que já trabalharam na mesma empresa
