@@ -1,5 +1,3 @@
--- FICHEIRO: benchmarks_depois_indices_forcado_e_real.sql
-
 set search_path to benchmark_schema, public;
 
 -- =========================================================================
@@ -1132,4 +1130,8 @@ BEGIN
         'Q22',
         'depois_c_seqscan'
     );
+<<<<<<< HEAD
 END $$;
+=======
+END $$;
+>>>>>>> 509e753d862ac4f56b6ed5c73e476d01775922ca
