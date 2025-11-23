@@ -568,8 +568,6 @@ tornando a query muito mais eficiente. */
 
 
 
-
-
 ---------------------------------------------
 
 -- Querie 16 original
@@ -705,6 +703,7 @@ WHERE s3.id_fun = f2.id_fun
 )
 ORDER BY nome_departamento, salario_atual DESC;
 
+
 -- Query 20 Otimizada
 
 EXPLAIN ANALYZE
@@ -803,13 +802,6 @@ GROUP BY d.nome, f.id_depart;
 /* A query já estava bastante otimizada, no entanto criámos o índice parcial ind_dependentes_fem na tabela dependentes sobre a coluna id_fun com o filtro WHERE sexo = 'Feminino'.
 Este índice evita que a query tenha de ler as 1131 linhas que não interessam, acelerando bastante o acesso aos dependentes femininos.
 Com este índice, o HashAggregate que calcula a média feminina por departamento roda rápido e o custo de execução cai, mantendo a query eficiente mesmo com vários joins. */
-
-
-
-
-
-
-
 
 
 ANALYZE departamentos;
