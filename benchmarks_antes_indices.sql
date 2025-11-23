@@ -42,6 +42,17 @@ buf_read INT;
 -- corpo da função responsável por executar o EXPLAIN ANALYZE e deixar no formato json para se
 -- extrairem os dados necessários mais facilmente
 BEGIN 
+
+-- 1. FASE DE WARM-UP (Aquecimento)
+    -- ==========================================
+    -- Executamos a query uma vez. O EXPLAIN (ANALYZE) garante que o código é corrido, 
+    -- carregando os dados do disco (cold) para a memória (warm).
+    EXECUTE 'EXPLAIN (ANALYZE) ' || query_code; 
+
+    -- ==========================================
+    -- 2. FASE DE BENCHMARK REAL
+    -- ==========================================
+    -- Agora que a cache está quente, medimos o desempenho real.
 EXECUTE 'EXPLAIN( ANALYZE, BUFFERS, FORMAT JSON) '|| query_code
     INTO plano;
 
