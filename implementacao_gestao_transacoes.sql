@@ -1,3 +1,6 @@
+
+
+-- cenário 1:
 -- Teste de ROLLBACK (Falha)
 BEGIN;
 
@@ -19,7 +22,7 @@ COMMIT;
 
 
 
-
+-- cenário 2:
 -- Teste de COMMIT (Sucesso)
 BEGIN;
 
@@ -41,8 +44,7 @@ COMMIT;
 
 
 
-
--- Cenário: Contratação de um candidato e fecho da respetiva vaga
+-- Cenário 3: Contratação de um candidato e fecho da respetiva vaga
 BEGIN;
 
 -- Passo 1: Atualizar o estado do candidato para 'Contratado'
@@ -66,7 +68,7 @@ COMMIT;
 -- =======================================================================================================================================================================================================================
 
 
--- Cenário: Inserção de múltiplos períodos de férias (Atomicidade)
+-- Cenário 4: Inserção de múltiplos períodos de férias (Atomicidade)
 BEGIN;
 
 -- Passo 1: Inserir o primeiro pedido de férias (Dados VÁLIDOS)
@@ -87,7 +89,7 @@ VALUES (20, '2024-08-20', '2024-08-01', 20, 'Por aprovar');
 COMMIT;
 
 -- =======================================================================================================================================================================================================================
-
+-- cenário 5: Promoção de Funcionário
 BEGIN;
 
 -- Passo 1: Mudar o cargo do funcionário (Vamos promover o ID 10)
@@ -105,7 +107,7 @@ COMMIT;
 
 -- =======================================================================================================================================================================================================================
 
--- Cenário 5: Registo de Avaliação e Atribuição de Permissão
+-- Cenário 6: Registo de Avaliação e Atribuição de Permissão
 BEGIN;
 
 -- Vamos usar o ID 30 como funcionário e o ID 1 como avaliador
@@ -123,6 +125,8 @@ COMMIT;
 
 -- =======================================================================================================================================================================================================================
 
+
+-- cenário 7: Inserção de Dependente com Violação de Chave Primária
 BEGIN;
 
 -- Vamos usar o ID 50 como funcionário.
@@ -145,6 +149,44 @@ COMMIT;
 
 
 -- =======================================================================================================================================================================================================================
+-- cenário 8: Demissão de Funcionário com Erro na Atualização do Funcionário substituto
+BEGIN;
+
+-- 1. DELETE do funcionário 100 (Simulando a demissão)
+-- Esta ação dispara o CASCADE: apaga o salário, férias, dependentes, utilizadores, etc.
+-- Também faz SET NULL no id_gerente do departamento que ele geria.
+DELETE FROM funcionarios
+WHERE id_fun = 100; 
+
+-- 2. Tentar ATUALIZAR um dado crucial (NIF) do funcionário 200 (o substituto) com um ERRO
+-- O NIF é 'NOT NULL' na sua tabela, logo, tentar definir o NIF para NULL (vazio) é proibido.
+UPDATE funcionarios
+SET nif = NULL
+WHERE id_fun = 200; 
+
+-- O Passo 2 falha: "violates not-null constraint on column nif"
+-- A transação falha e faz ROLLBACK.
+-- Resultado: O funcionário 100 não é apagado (não é demitido) e o NIF do funcionário 200 não é alterado.
+
+COMMIT;
 
 
+-- =======================================================================================================================================================================================================================
 
+
+-- cenário 9: Gestão de Candidaturas com Atualização de Estado e Recrutador
+BEGIN;
+-- Tenhamos em conta que o candidato 3 se candidatou às vagas 40 e 894.
+
+-- Passo 1: Atualizar o estado da candidatura para 'Em análise'
+UPDATE candidato_a
+SET estado = 'Em análise'
+WHERE id_cand = 3 AND id_vaga = 40;
+
+-- Passo 2: Atribuir o recrutador responsável pela análise
+UPDATE candidato_a
+SET id_recrutador = 2
+WHERE id_cand = 3 AND id_vaga = 894;
+
+-- O COMMIT garante que o estado da candidatura só é alterado se o recrutador for atribuído.
+COMMIT;
