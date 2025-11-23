@@ -390,10 +390,7 @@ END $$;
 
 DO $$
 BEGIN
-    -- FICHEIRO: benchmarks_depois_indices_c_seqscan.sql
-
-
-
+-- FICHEIRO: benchmarks_depois_indices_c_seqscan.sql
 -- NOTA: Assume-se que a função run_benchmark (com Warm-up) já foi definida 
 -- e que os índices já foram criados no schema bd054_schema.
 -- O Sequential Scan (SeqScan) está ativo por defeito. Não é necessário usar SET.
