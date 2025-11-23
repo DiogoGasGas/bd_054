@@ -11,6 +11,10 @@ sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes pa
 
 -- =======================================================================================================================================================================================================================
 -- =======================================================================================================================================================================================================================
+
+
+
+
 --1
 /* Índice B-tree para otimizar consultas que envolvam o id do departamento nos funcionários, foreign key.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por id_depart. 
@@ -18,10 +22,10 @@ As queries 1,3,5,9,10,11,15,18,22 serão melhoradas devido aos JOINs que usam do
 as tabelas funcionarios e departamentos. 
 */
 
-  
-set search_path to bd054_schema, public;
 CREATE INDEX ind_fun_depart ON funcionarios(id_depart);
 
+
+-- =======================================================================================================================================================================================================================
 
 --2
 /*
@@ -33,6 +37,8 @@ JOIN, GROUP BY e ORDER BY que envolvem a tabela departamentos nestas queries.
 
 CREATE INDEX ind_nome_depart ON departamentos(nome);
 
+
+-- =======================================================================================================================================================================================================================
 
 --3
 /*
@@ -47,6 +53,8 @@ cláusulas WHERE, HAVING e filtros ( >, <) que envolvem a coluna salario_bruto n
 CREATE INDEX ind_salario_bruto ON salario(salario_bruto);
 
 
+-- =======================================================================================================================================================================================================================
+
 --4
 /* Índice composto B-tree para otimizar consultas que necessitem do salário mais recente de cada funcionário.
    Melhora o desempenho de buscas que filtrem por id_fun e ordenam por data de início em ordem decrescente.
@@ -56,6 +64,8 @@ CREATE INDEX ind_salario_bruto ON salario(salario_bruto);
 */
 CREATE INDEX ind_salario_fun_data ON salario(id_fun, data_inicio DESC);
 
+
+-- =======================================================================================================================================================================================================================
 
 --5
 /* 
@@ -67,6 +77,7 @@ futuras queries que possam ter esta característica.
 
 CREATE INDEX ind_tipo_beneficio ON beneficios(tipo);
 
+-- =======================================================================================================================================================================================================================
 
 --6
 /*
@@ -80,6 +91,8 @@ apesar de ser muito menos prático que o índice B-tree para a maioria dos casos
 CREATE INDEX hash_tipo_beneficio ON beneficios USING HASH(tipo);
 
 
+-- =======================================================================================================================================================================================================================
+
 --7
 /*
 Índice B-tree para otimizar consultas que envolvam o valor dos benefícios.
@@ -90,6 +103,8 @@ e HAVING que envolvem o valor dos benefícios.
 
 CREATE INDEX ind_valor_beneficio ON beneficios(valor);
 
+
+-- =======================================================================================================================================================================================================================
 
 --8
 /*
@@ -102,6 +117,9 @@ Este indice é especialmente útil no caso de haverem igualdades para o grau de 
 CREATE INDEX ind_parentesco_dependentes ON dependentes(parentesco);
 
 
+-- =======================================================================================================================================================================================================================
+
+
 --9
 /*
 Índice Hash para otimizar consultas que envolvam o parentesco dos dependentes.
@@ -111,6 +129,9 @@ servirá para testar o desempenho comparativamente ao indice B-tree acima criado
 
 CREATE INDEX hash_parentesco_dependentes ON dependentes USING HASH(parentesco);
 
+
+
+-- =======================================================================================================================================================================================================================
 
 --10
 /*
@@ -122,6 +143,9 @@ A query 14 vai beneficiar na parte do COUNT onde a contagem será acelerada. As 
 
 CREATE INDEX ind_justificacao_faltas ON faltas(justificacao);
 
+
+
+-- =======================================================================================================================================================================================================================
 
 --11
 /*
@@ -136,6 +160,8 @@ devido à natureza das igualdades.
 CREATE INDEX hash_justificacao_faltas ON faltas USING hash(justificacao);
 
 
+-- =======================================================================================================================================================================================================================
+
 --12
 /*
 Índice B-tree para otimizar consultas relacionadas às avaliações numéricas dos funcionários.
@@ -147,6 +173,8 @@ no uso de um WHERE ou ORDER BY envolvendo a avaliação numérica, o índice ser
 CREATE INDEX ind_avaliacao_num ON avaliacoes(avaliacao_numerica);
 
 
+-- =======================================================================================================================================================================================================================
+
 --13
 /*
 Índice composto B-tree útil para melhorar consultas que envolvam o período de férias dos funcionários.
@@ -157,26 +185,63 @@ As queries 5,8,21 serão afetadas indiretamente, caso haja necessidade de filtro
 CREATE INDEX datas_ferias ON ferias(data_inicio, data_fim);
 
 
+-- =======================================================================================================================================================================================================================
+
+
 --14
+/* Índice B-tree para otimizar consultas que envolvam o nome da empresa no histórico de trabalho dos funcionários. 
+Melhora o desempenho de buscas que filtrem, usem GROUP BY ou ORDER BY pela coluna nome_empresa. 
+É esperado que as queries 16 e 19 melhorem o seu desempenho, pois dependem de filtros e agrupamentos por este nome. */
 
 CREATE INDEX ind_nome_historico ON historico_empresas(nome_empresa);
 
 --15
+/* Índice B-tree útil para ordenar ou pesquisar pelo nome da formação. 
+Otimiza consultas que filtrem por formações específicas ou usem ORDER BY pelo nome. 
+A query 6 (que lida com a tabela formacoes) será beneficiada em cenários onde seja necessário pesquisar ou ordenar o resultado pelo nome da formação. */
+
 CREATE INDEX ind_nome_formacao ON formacoes(nome_formacao);
 
 
+-- =======================================================================================================================================================================================================================
+
 --16
+/* Índice B-tree baseado em expressão (Functional Index) para otimizar consultas que usem o nome completo concatenado (primeiro_nome || ' ' || ultimo_nome). 
+Melhora o desempenho de buscas que usem esta expressão exata no ORDER BY ou GROUP BY, evitando que o sistema tenha que recalcular a concatenação a cada consulta. 
+As queries 2, 4, 7, 10, 20, 21 serão beneficiadas por usarem a expressão de nome completo na ordenação dos resultados. */
+
 CREATE INDEX ind_nome_completo ON funcionarios ((primeiro_nome || ' ' || ultimo_nome));
 
 
+-- =======================================================================================================================================================================================================================
+
+
 --17
+/* Índice composto B-tree para otimizar consultas que buscam o maior número de dias de férias dentro de um determinado estado (ex: 'Aprovado'). 
+Melhora o desempenho de buscas que filtrem por estado e procuram o valor máximo de dias (num_dias em ordem decrescente). 
+As queries 8 (funcionário com mais dias de férias aprovadas) e 21 terão um benefício significativo, acelerando a busca pelo máximo de dias dentro do filtro 'Aprovado'. */
+
 CREATE INDEX ind_ferias_estado_numdias_desc ON ferias(estado_aprov, num_dias DESC);
 
 
+-- =======================================================================================================================================================================================================================
+
 --18
+/* Índice composto B-tree para otimizar consultas que envolvam o ID do funcionário e o nome da empresa no histórico de trabalho. 
+É ideal para acelerar JOINs entre funcionarios e historico_empresas e a aplicação de filtros no nome da empresa. 
+As queries 16 e 19 serão beneficiadas, pois precisam acessar rapidamente o histórico de trabalho do funcionário com um filtro específico no nome da empresa. */
+
 CREATE INDEX ind_hist_emp_idfun_nome ON historico_empresas(id_fun, nome_empresa);
 
+
+-- =======================================================================================================================================================================================================================
+
 --19
+/* Índice Parcial B-tree para otimizar buscas que filtram por dependentes do sexo feminino. 
+Este índice armazena apenas os id_fun para os registos onde sexo = 'Feminino', 
+reduzindo o volume de dados a ser lido em consultas que utilizam este filtro. 
+As queries 21 e 22 terão uma melhoria substancial no seu desempenho, pois o filtro WHERE sexo = 'Feminino' é resolvido de forma muito mais eficiente. */
+
 CREATE INDEX ind_dependentes_fem ON dependentes(id_fun) WHERE sexo = 'Feminino';
 
 
