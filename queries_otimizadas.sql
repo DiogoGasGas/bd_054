@@ -228,12 +228,29 @@ JOIN (
 ORDER BY s.salario_liquido DESC
 LIMIT 3;
 
+-------------------------------------------------------------------------------
+
+--5. Querie 5 original
+
+SELECT
+  d.nome,                   
+  ROUND(AVG(fer.num_dias),0) AS media_dias_ferias     
+FROM departamentos AS d
+JOIN funcionarios AS f 
+ON d.id_depart = f.id_depart
+JOIN ferias AS fer 
+ON f.id_fun = fer.id_fun
+GROUP BY d.nome;
+
 
 ------------------------------------------------------------------------------
 
 -- Querie 6 original
 
 set search_path to bd054_schema, public;
+ANALYZE formacoes;
+ANALYZE teve_formacao;
+
 EXPLAIN ANALYZE
 SELECT
   f.id_for,
@@ -612,6 +629,13 @@ ORDER BY f.id_fun;
 ------------------------------------------------------------------------------------------
 
 -- Querie 18 original
+set search_path to bd054_schema, public;
+
+ANALYZE departamentos;
+ANALYZE funcionarios;
+ANALYZE teve_formacao;
+
+EXPLAIN ANALYZE
 SELECT 
     d.nome,
     ROUND((COUNT(DISTINCT teve.id_fun)::decimal / calcular_num_funcionarios_departamento(d.id_depart)::decimal) * 100, 2) AS taxa_adesao

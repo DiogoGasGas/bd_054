@@ -162,6 +162,47 @@ BEGIN
         'antes'
     );
 
+
+    PERFORM run_benchmark(
+        'SELECT
+        d.nome,                   
+        ROUND(AVG(fer.num_dias),0) AS media_dias_ferias     
+    FROM bd054_schema.departamentos AS d
+    JOIN bd054_schema.funcionarios AS f 
+    ON d.id_depart = f.id_depart
+    JOIN bd054_schema.ferias AS fer 
+    ON f.id_fun = fer.id_fun
+    GROUP BY d.nome;',
+        'Q05',
+        'antes'
+    );
+
+
+    -- Q06: Inserção manual dos resultados do benchmark
+    INSERT INTO benchmark_results(
+        query_name,
+        etapa,
+        planning_time,
+        execution_time,
+        total_time,
+        total_cost,
+        rows_returned,
+        buffers_hit,
+        buffers_read
+    )
+    VALUES(
+        'Q06',
+        'antes',
+        0.578,
+        3.580,
+        4.158,
+        5.16,
+        2,
+        NULL,
+        NULL
+    );
+
+
     PERFORM run_benchmark(
         'SELECT  
             f.id_fun,
@@ -182,6 +223,7 @@ BEGIN
         'antes'
     );
 
+
     PERFORM run_benchmark(
         'SELECT
       f.id_fun,
@@ -200,6 +242,7 @@ BEGIN
         'Q08',
         'antes'
     );
+
 
     PERFORM run_benchmark(
         'SELECT
@@ -223,6 +266,7 @@ BEGIN
         'antes'
     );
 
+
     PERFORM run_benchmark(
         'SELECT
         f.id_fun, 
@@ -239,6 +283,7 @@ BEGIN
         'Q10',
         'antes'
     );
+
 
     PERFORM run_benchmark(
         'SELECT
@@ -263,6 +308,7 @@ BEGIN
         'antes'
     );
 
+
     PERFORM run_benchmark(
         'SELECT 
         f.id_fun,
@@ -276,6 +322,22 @@ BEGIN
         'Q12',
         'antes'
     );
+
+
+    PERFORM run_benchmark(
+        'SELECT 
+            f.primeiro_nome,
+            f.ultimo_nome,
+            av.autoavaliacao
+        FROM bd054_schema.funcionarios AS f 
+        JOIN bd054_schema.avaliacoes AS av
+        ON f.id_fun = av.id_fun
+        -- se a autoavaliacao é null, é porque não existe avaliação preenchida
+        WHERE av.autoavaliacao IS NULL;',
+        'Q13',
+        'antes'
+    );
+
 
     PERFORM run_benchmark(
         'SELECT 
@@ -337,6 +399,50 @@ BEGIN
         'antes'
     );
 
+
+    PERFORM run_benchmark(
+        'SELECT 
+  f.id_fun,
+  f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
+  COUNT(fal.data) AS total_faltas
+FROM bd054_schema.funcionarios AS f
+LEFT JOIN bd054_schema.faltas AS fal 
+  ON f.id_fun = fal.id_fun
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome
+-- filtrar funcionários que têm a soma de faltas igual a 0
+HAVING COUNT(fal.data) = 0
+ORDER BY f.id_fun;',
+        'Q17',
+        'antes'
+    );
+
+
+
+    -- Q18: Inserção manual dos resultados do benchmark
+    INSERT INTO benchmark_results(
+        query_name,
+        etapa,
+        planning_time,
+        execution_time,
+        total_time,
+        total_cost,
+        rows_returned,
+        buffers_hit,
+        buffers_read
+    )
+    VALUES(
+        'Q18',
+        'antes',
+        2.601,
+        8.217,
+        10.818,
+        125.01,
+        8,
+        NULL,
+        NULL
+    );
+
+
     PERFORM run_benchmark(
         'SELECT DISTINCT
         f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
@@ -365,6 +471,7 @@ BEGIN
         'Q19',
         'antes'
     );
+
 
     PERFORM run_benchmark(
         'SELECT 
@@ -404,6 +511,7 @@ BEGIN
         'antes'
     );
 
+
     PERFORM run_benchmark(
         'SELECT 
         f.id_fun,
@@ -429,6 +537,7 @@ BEGIN
         'Q21',
         'antes'
     );
+
 
     PERFORM run_benchmark(
         'SELECT 

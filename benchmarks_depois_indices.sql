@@ -16,7 +16,7 @@ BEGIN
     GROUP BY d.nome
     ORDER BY total_funcionarios DESC;',
         'Q01',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -36,7 +36,7 @@ BEGIN
     )
     ORDER BY salario_bruto DESC;',
         'Q02',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -56,7 +56,7 @@ BEGIN
     GROUP BY d.nome
     ORDER BY tot_remun DESC;',
         'Q03',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -74,8 +74,50 @@ BEGIN
     ORDER BY salario_liquido DESC
     LIMIT 3;',
         'Q04',
-        'depois'
+        'depois indices'
     );
+
+
+    PERFORM run_benchmark(
+        'SELECT
+        d.nome,                   
+        ROUND(AVG(fer.num_dias),0) AS media_dias_ferias     
+        FROM bd054_schema.departamentos AS d
+        JOIN bd054_schema.funcionarios AS f 
+        ON d.id_depart = f.id_depart
+        JOIN bd054_schema.ferias AS fer 
+        ON f.id_fun = fer.id_fun
+        GROUP BY d.nome;',
+        'Q05',
+        'depois indices'
+    );
+
+
+    -- Q06: Inserção manual dos resultados do benchmark depois dos índices
+    INSERT INTO benchmark_results(
+        query_name,
+        etapa,
+        planning_time,
+        execution_time,
+        total_time,
+        total_cost,
+        rows_returned,
+        buffers_hit,
+        buffers_read
+    )
+    VALUES(
+        'Q06',
+        'depois indices',
+        0.328,
+        1.339,
+        1.667,
+        5.16,
+        2,
+        NULL,
+        NULL
+    );
+
+
 
     PERFORM run_benchmark(
         'SELECT  
@@ -94,7 +136,7 @@ BEGIN
         )
         ORDER BY f.id_fun ASC;',
         'Q07',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -113,7 +155,7 @@ BEGIN
     )
     ORDER BY f.id_fun;',
         'Q08',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -135,7 +177,7 @@ BEGIN
     )
     ORDER BY media_aval DESC;',
         'Q09',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -152,7 +194,7 @@ BEGIN
     GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome, dep.nome
     ORDER BY nome_funcionario;',
         'Q10',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -175,7 +217,7 @@ BEGIN
     GROUP BY dep.id_depart, dep.nome
     ORDER BY media_candidatos DESC;',
         'Q11',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -189,8 +231,24 @@ BEGIN
     GROUP BY f.id_fun, f.primeiro_nome
     ORDER BY num_dependentes DESC;',
         'Q12',
-        'depois'
+        'depois indices'
     );
+
+
+    PERFORM run_benchmark(
+        'SELECT 
+    f.primeiro_nome,
+    f.ultimo_nome,
+    av.autoavaliacao
+FROM bd054_schema.funcionarios AS f 
+JOIN bd054_schema.avaliacoes AS av
+  ON f.id_fun = av.id_fun
+-- se a autoavaliacao é null, é porque não existe avaliação preenchida
+WHERE av.autoavaliacao IS NULL;',
+        'Q13',
+        'depois indices'
+    );
+
 
     PERFORM run_benchmark(
         'SELECT 
@@ -206,8 +264,9 @@ BEGIN
     GROUP BY d.id_depart, d.nome
     ORDER BY total_faltas DESC;',
         'Q14',
-        'depois'
+        'depois indices'
     );
+
 
     PERFORM run_benchmark(
         'SELECT 
@@ -236,7 +295,7 @@ BEGIN
     )
     ORDER BY media_salarial_departamento DESC;',
         'Q15',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -249,8 +308,51 @@ BEGIN
     GROUP BY h.nome_empresa
     HAVING COUNT(f.id_fun) > 1;',
         'Q16',
-        'depois'
+        'depois indices'
     );
+
+    PERFORM run_benchmark(
+        'SELECT 
+  f.id_fun,
+  f.primeiro_nome || '' '' || f.ultimo_nome AS nome_completo,
+  COUNT(fal.data) AS total_faltas
+FROM bd054_schema.funcionarios AS f
+LEFT JOIN bd054_schema.faltas AS fal 
+  ON f.id_fun = fal.id_fun
+GROUP BY f.id_fun, f.primeiro_nome, f.ultimo_nome
+HAVING COUNT(fal.data) = 0
+ORDER BY f.id_fun;',
+        'Q17',
+        'depois indices'
+    );
+
+
+
+    -- Q18: Inserção manual dos resultados do benchmark depois dos índices
+    INSERT INTO benchmark_results(
+        query_name,
+        etapa,
+        planning_time,
+        execution_time,
+        total_time,
+        total_cost,
+        rows_returned,
+        buffers_hit,
+        buffers_read
+    )
+    VALUES(
+        'Q18',
+        'depois indices',
+        0.713,
+        3.229,
+        3.942,
+        125.01,
+        8,
+        NULL,
+        NULL
+    );
+
+
 
     PERFORM run_benchmark(
         'SELECT DISTINCT
@@ -278,8 +380,9 @@ BEGIN
         ON f.id_fun = h.id_fun 
         AND h.nome_empresa = ''Moura'';',
         'Q19',
-        'depois'
+        'depois indices'
     );
+
 
     PERFORM run_benchmark(
         'SELECT 
@@ -316,7 +419,7 @@ BEGIN
         )
     ORDER BY nome_departamento, salario_atual DESC;',
         'Q20',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -342,7 +445,7 @@ BEGIN
         nome_completo, 
         s.salario_liquido;',
         'Q21',
-        'depois'
+        'depois indices'
     );
 
     PERFORM run_benchmark(
@@ -364,6 +467,6 @@ BEGIN
         ON d.id_depart = f.id_depart
     GROUP BY d.nome, f.id_depart;',
         'Q22',
-        'depois'
+        'depois indices'
     );
 END $$;

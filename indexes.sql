@@ -6,7 +6,7 @@
 /* 
 Por definição, índices B-tree são criados para colunas com alta cardinalidade e consultas frequentes
 sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes para consultas de igualdade em colunas com baixa cardinalidade.
-    Sem qualquer indicação do contrário, os índices são criados como B-tree.
+-- Sem qualquer indicação do contrário, os índices são criados como B-tree.
 */
 
 -- =======================================================================================================================================================================================================================
@@ -14,7 +14,7 @@ sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes pa
 
 
 
-
+set search_path to bd054_schema, public;
 --1
 /* Índice B-tree para otimizar consultas que envolvam o id do departamento nos funcionários, foreign key.
 Melhora o desempenho de buscas que filtrem ou usem ORDER BY por id_depart. 

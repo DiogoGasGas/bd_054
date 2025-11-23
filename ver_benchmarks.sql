@@ -4,6 +4,7 @@ set search_path to benchmark_schema, public;
 SELECT * FROM benchmark_results;
 
 
+
 SELECT 
     query_name,
     etapa,
@@ -18,8 +19,9 @@ FROM benchmark_results
 ORDER BY 
     query_name,
     CASE 
-        WHEN etapa = 'antes' THEN 1
-        WHEN etapa = 'depois' THEN 2
-        ELSE 3
+        WHEN TRIM(etapa) = 'antes' THEN 1
+        WHEN TRIM(etapa) = 'depois indices' THEN 2
+        WHEN TRIM(etapa) = 'depois indices e otimizacao' THEN 3
+        ELSE 4
     END;
 
