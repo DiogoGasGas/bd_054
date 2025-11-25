@@ -272,3 +272,20 @@ DROP INDEX IF EXISTS ind_ferias_estado_numdias_desc;
 DROP INDEX IF EXISTS ind_hist_emp_idfun_nome; 
 DROP INDEX IF EXISTS ind_dependentes_fem;
 -- =======================================================================================================================================================================================================================
+
+set search_path to bd_054_schema, public;
+drop index if exists idx_nome_completo;
+DROp index if exists idx_ferias_estado_numdias_desc;
+drop index if exists idx_ferias_estado_numdias;
+
+SELECT
+    schemaname,
+    tablename,
+    indexname,
+    tablespace
+FROM
+    pg_indexes
+WHERE
+    schemaname = 'bd_054_schema'
+ORDER BY
+    tablename, indexname;
