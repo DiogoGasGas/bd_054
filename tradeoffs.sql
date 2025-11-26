@@ -7,6 +7,10 @@ SET search_path TO bd054_schema, public;
 -- 1. Limpeza inicial (caso tenhas corrido antes)
 DROP TABLE IF EXISTS beneficios_bench;
 DROP TABLE IF EXISTS resultados_benchmark;
+DROP INDEX IF EXISTS bench_ind_tipo;
+DROP INDEX IF EXISTS bench_hash_tipo;
+DROP INDEX IF EXISTS bench_ind_valor;
+
 
 -- 2. Preparar as tabelas
 -- Tabela 'bench' é uma cópia vazia da tabela beneficios

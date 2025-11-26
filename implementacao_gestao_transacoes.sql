@@ -1,4 +1,5 @@
 
+set search_path to bd054_schema, public;
 
 -- cenário 1:
 -- Teste de ROLLBACK (Falha)
@@ -17,13 +18,14 @@ VALUES (8888, '2026-01-21', 'Texto em vez de numero', 1234);
 
 COMMIT;
 
-
+ROLLBACK;
 -- =======================================================================================================================================================================================================================
 
 
 
 -- cenário 2:
 -- Teste de COMMIT (Sucesso)
+SET search_path TO bd054_schema, public;
 BEGIN;
 
 --Passo 1: Insere funcionário (Isto funciona)
@@ -88,8 +90,11 @@ VALUES (20, '2024-08-20', '2024-08-01', 20, 'Por aprovar');
 
 COMMIT;
 
+ROLLBACK;
+
 -- =======================================================================================================================================================================================================================
 -- cenário 5: Promoção de Funcionário
+SET search_path TO bd054_schema, public;
 BEGIN;
 
 -- Passo 1: Mudar o cargo do funcionário (Vamos promover o ID 10)
@@ -104,7 +109,7 @@ VALUES (10, CURRENT_DATE, 3500.00, 2400.00);
 -- Se ambos funcionarem, a promoção é oficializada.
 COMMIT;
 
-
+ROLLBACK;
 -- =======================================================================================================================================================================================================================
 
 -- Cenário 6: Registo de Avaliação e Atribuição de Permissão
@@ -146,6 +151,7 @@ VALUES (50, 'Pedro', 'Filho', 'Masculino', '2010-01-01');
 
 COMMIT;
 
+ROLLBACK;
 
 
 -- =======================================================================================================================================================================================================================
@@ -170,7 +176,7 @@ WHERE id_fun = 200;
 
 COMMIT;
 
-
+ROLLBACK;
 -- =======================================================================================================================================================================================================================
 
 
@@ -189,4 +195,56 @@ SET id_recrutador = 2
 WHERE id_cand = 3 AND id_vaga = 894;
 
 -- O COMMIT garante que o estado da candidatura só é alterado se o recrutador for atribuído.
+COMMIT;
+
+ROLLBACK;
+
+
+
+
+SET search_path TO bd054_schema, public;
+
+BEGIN;
+
+-- 1. LIMPEZA PREVENTIVA: Remove referências a funcionários de teste (8888 e 9999) que possam ser recrutadores ou candidatos.
+
+-- 1.1. Limpar referências de recrutador: Define id_recrutador para 1 (assumindo que id_fun=1 existe e é seguro)
+UPDATE candidato_a
+SET id_recrutador = 1
+WHERE id_recrutador IN (8888, 9999);
+
+-- 1.2. Corrigir o estado da linha problemática (A que causa o erro 3, 39)
+UPDATE candidato_a
+SET estado = 'Submetido', data_cand = CURRENT_DATE -- Garante um estado válido e uma data
+WHERE id_cand = 3 AND id_vaga = 39; 
+-- Nota: A linha falhada é (3, 39) e não (3, 894), corrigido no WHERE.
+
+-- 2. LIMPEZA PRINCIPAL: Elimina os funcionários de teste. (Isto deve disparar o CASCADE)
+DELETE FROM funcionarios
+WHERE id_fun IN (8888, 9999);
+
+-- 3. LIMPEZA DE MODIFICAÇÕES ANTERIORES (Revertendo as alterações dos cenários)
+-- (Inclui a lógica de reversão de vagas, promoções, etc.)
+
+-- Reverter VAGAS
+UPDATE vagas
+SET estado = 'Aberta'
+WHERE id_vaga = 10;
+
+-- Reverter CANDIDATURAS modificadas nos testes
+UPDATE candidato_a
+SET estado = 'Submetido', id_recrutador = NULL, data_cand = CURRENT_DATE
+WHERE (id_cand = 50 AND id_vaga = 10);
+
+-- Reverter Promoção (id_fun 10)
+UPDATE funcionarios SET cargo = 'Developer' WHERE id_fun = 10;
+DELETE FROM salario WHERE id_fun = 10 AND data_inicio = CURRENT_DATE;
+
+-- Outras limpezas (avaliações, dependentes, etc.)
+
+DELETE FROM avaliacoes WHERE id_fun = 30 AND data = CURRENT_DATE;
+DELETE FROM permissoes WHERE id_fun = 30 AND permissao = 'ACESSO_RELATORIOS_GESTAO';
+DELETE FROM dependentes WHERE id_fun = 50 AND nome = 'Pedro';
+
+
 COMMIT;

@@ -131,19 +131,13 @@ RETURNS TRIGGER AS $$
 BEGIN
     -- Verifica se o cargo foi alterado
     IF OLD.cargo IS DISTINCT FROM NEW.cargo THEN
-        -- Regista a mudança na tabela de histórico
-        INSERT INTO historico_empresas (id_fun, nome_empresa, nome_departamento, cargo, data_inicio, data_fim)
-        VALUES (NEW.id_fun, 'Empresa Atual', 'Departamento Atual', NEW.cargo, CURRENT_DATE, NULL);
+        -- CORREÇÃO: Removemos a referência à coluna "nome_departamento"
+        INSERT INTO historico_empresas (id_fun, nome_empresa, cargo, data_inicio, data_fim)
+        VALUES (NEW.id_fun, 'Empresa Atual', NEW.cargo, CURRENT_DATE, NULL);
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Trigger associado à função
-CREATE TRIGGER trg_registrar_mudanca_cargo
-AFTER UPDATE ON funcionarios
-FOR EACH ROW
-EXECUTE FUNCTION registrar_mudanca_cargo();
 
 
 
