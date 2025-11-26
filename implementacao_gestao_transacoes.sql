@@ -206,7 +206,7 @@ SET search_path TO bd054_schema, public;
 
 BEGIN;
 
--- 1. LIMPEZA PREVENTIVA: Remove referências a funcionários de teste (8888 e 9999) que possam ser recrutadores ou candidatos.
+-- 1. LIMPEZA PREVENTIVA
 
 -- 1.1. Limpar referências de recrutador: Define id_recrutador para 1 (assumindo que id_fun=1 existe e é seguro)
 UPDATE candidato_a
