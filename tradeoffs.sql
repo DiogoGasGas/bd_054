@@ -32,14 +32,14 @@ DECLARE
 BEGIN
     inicio := clock_timestamp();
 
-    -- Inserir 50.000 linhas
+    -- Inserir 100.000 linhas
     INSERT INTO beneficios_bench (id_fun, data_inicio, tipo, valor)
     SELECT 
         (random() * 1000)::int, 
         CURRENT_DATE + (i || ' days')::interval, 
         CASE WHEN (i % 2) = 0 THEN 'Seguro Saúde' ELSE 'Subsídio Transporte' END,
         (random() * 200)::numeric(10,2)
-    FROM generate_series(1, 50000) AS i;
+    FROM generate_series(1, 100000) AS i;
 
     fim := clock_timestamp();
     
@@ -66,14 +66,14 @@ DECLARE
 BEGIN
     inicio := clock_timestamp();
 
-    -- Inserir as mesmas 50.000 linhas
+    -- Inserir as mesmas 100.000 linhas
     INSERT INTO beneficios_bench (id_fun, data_inicio, tipo, valor)
     SELECT 
         (random() * 1000)::int, 
         CURRENT_DATE + (i || ' days')::interval, 
         CASE WHEN (i % 2) = 0 THEN 'Seguro Saúde' ELSE 'Subsídio Transporte' END,
         (random() * 200)::numeric(10,2)
-    FROM generate_series(1, 50000) AS i;
+    FROM generate_series(1, 100000) AS i;
 
     fim := clock_timestamp();
     
@@ -192,7 +192,7 @@ DROP TABLE resultados_benchmark_fun;
 
 
 -- ====================================================================
--- TESTE 3: Benchmark Update
+-- TESTE 3: Benchmark Update (2 Colunas + 2 Índices)
 -- ====================================================================
 
 SET search_path TO bd054_schema, public;
@@ -210,11 +210,11 @@ CREATE TEMPORARY TABLE resultados_update_bench (
 -- ====================================================================
 -- PREPARAÇÃO (Criação da Tabela Base)
 -- ====================================================================
--- Criar estrutura simples
 CREATE TABLE funcionarios_update_bench (
     id_fun INT,
     primeiro_nome VARCHAR(50),
-    ultimo_nome VARCHAR(50)
+    ultimo_nome VARCHAR(50),
+    id_depart INT
 );
 
 -- ====================================================================
@@ -227,20 +227,22 @@ DECLARE
 BEGIN
     -- 1. Popular a tabela com 100.000 registos
     TRUNCATE funcionarios_update_bench;
-    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome)
+    
+    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome, id_depart)
     SELECT 
         i, 
         'Joao' || i, 
-        'Silva' || i
+        'Silva' || i,
+        (random() * 7 + 1)::int -- Gerar departamento aleatório
     FROM generate_series(1, 100000) AS i;
 
     -- 2. Medir o UPDATE
-    -- Vamos mudar o primeiro nome de TODA a gente.
-    -- Sem índices, isto deve ser apenas escrita sequencial na tabela (rápido).
+    -- Alteramos o PRIMEIRO e o ÚLTIMO nome
     inicio := clock_timestamp();
 
     UPDATE funcionarios_update_bench 
-    SET primeiro_nome = 'Maria' || id_fun;
+    SET primeiro_nome = 'Maria' || id_fun,
+        ultimo_nome = 'Pereira' || id_fun;
 
     fim := clock_timestamp();
     
@@ -248,35 +250,41 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- TESTE B: Update COM Índice Funcional
+-- TESTE B: Update COM Índices (Funcional + Departamento)
 -- ====================================================================
 DO $$
 DECLARE
     inicio TIMESTAMP;
     fim TIMESTAMP;
 BEGIN
-    -- 1. Reset aos dados (Apagar e inserir de novo para ter condições iguais)
+    -- 1. Reset aos dados
     TRUNCATE funcionarios_update_bench;
-    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome)
+    
+    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome, id_depart)
     SELECT 
         i, 
         'Joao' || i, 
-        'Silva' || i
+        'Silva' || i,
+        (random() * 7 + 1)::int
     FROM generate_series(1, 100000) AS i;
 
-    -- 2. Criar o Índice Funcional (o "alvo" do nosso teste)
-    -- O Postgres terá de recalcular (primeiro || ' ' || ultimo) sempre que mudarmos um nome.
+    -- 2. Criar os Índices
+    -- Índice Funcional (O Postgres tem de recalcular a concatenação dos dois novos nomes)
     CREATE INDEX bench_ind_nome_completo ON funcionarios_update_bench ((primeiro_nome || ' ' || ultimo_nome));
+    
+    -- Índice de Departamento (Adicionado conforme pedido, simula tabela real)
+    CREATE INDEX bench_ind_fun_depart ON funcionarios_update_bench(id_depart);
 
-    -- 3. Medir o UPDATE (Exatamente a mesma operação)
+    -- 3. Medir o UPDATE
     inicio := clock_timestamp();
 
     UPDATE funcionarios_update_bench 
-    SET primeiro_nome = 'Maria' || id_fun;
+    SET primeiro_nome = 'Maria' || id_fun,
+        ultimo_nome = 'Pereira' || id_fun;
 
     fim := clock_timestamp();
     
-    INSERT INTO resultados_update_bench VALUES ('2. Update Com Índice Funcional', fim - inicio);
+    INSERT INTO resultados_update_bench VALUES ('2. Update Com Índices', fim - inicio);
 END $$;
 
 -- ====================================================================
