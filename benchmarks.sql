@@ -1,3 +1,10 @@
+-- ===================================================================================================================================================
+-- Neste ficheiro criamos uma tabela para registar os resultados dos benchmarks
+-- Nessa tabela vamos inserir os resultados antes de criar os indices, depois de criar índices, e depois de criar os indices e otimizar as queries
+-- ===================================================================================================================================================
+
+
+
 set search_path to benchmark_schema, public;
 -- CORRER ANTES DE CRIAR ÍNDICES E OTIMIZAÇÕES
 -- primeiro de tudo, cria se uma tabela para armazenar os resultados do benchmark

@@ -1,3 +1,8 @@
+-- ===================================================================
+-- Neste ficheriro criamos índices que possam ajudar na otimização das queries.
+-- Além disso, fazemos também uma análise de trade-offs entre interrogações e atualizações da base de dados.
+-- ===================================================================
+
 
 ---- Criação de índices para otimização de consultas
 
