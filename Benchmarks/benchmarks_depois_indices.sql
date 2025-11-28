@@ -412,6 +412,5 @@ INSERT INTO benchmark_results (
         'depois indices'
     );
     
--- O comando SET LOCAL é automaticamente revertido aqui.
 
 END $$;

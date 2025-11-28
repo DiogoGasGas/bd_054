@@ -1,8 +1,11 @@
--- ====================================================================
--- BENCHMARK SIMPLIFICADO: Trade-off de Escrita
--- ====================================================================
 
 SET search_path TO bd054_schema, public;
+
+-- ====================================================================
+--TESTE 1
+-- Tabela Beneficios
+-- Comparação: Sem Índices vs Com Índices (Depart + Nome Completo)
+-- ====================================================================
 
 -- 1. Limpeza inicial (caso tenhas corrido antes)
 DROP TABLE IF EXISTS beneficios_bench;
@@ -91,12 +94,10 @@ DROP TABLE beneficios_bench;
 DROP TABLE resultados_benchmark;
 
 
--- ====================================================================
---TESTE 2
--- ====================================================================
 
 -- ====================================================================
--- BENCHMARK ADICIONAL: Tabela Funcionários
+--TESTE 2
+-- Tabela Funcionários
 -- Comparação: Sem Índices vs Com Índices (Depart + Nome Completo)
 -- ====================================================================
 
@@ -192,7 +193,8 @@ DROP TABLE resultados_benchmark_fun;
 
 
 -- ====================================================================
--- TESTE 3: Benchmark Update (2 Colunas + 2 Índices)
+-- TESTE 3: Tabela Funcionarios (2 Colunas + 2 Índices)
+-- Update em massa com e sem índices
 -- ====================================================================
 
 SET search_path TO bd054_schema, public;
