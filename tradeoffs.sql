@@ -297,3 +297,6 @@ SELECT * FROM resultados_update_bench ORDER BY cenario;
 -- Limpeza final
 DROP TABLE funcionarios_update_bench;
 DROP TABLE resultados_update_bench;
+
+
+

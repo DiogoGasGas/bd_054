@@ -136,6 +136,11 @@ ANALYZE utilizadores;
 ANALYZE permissoes;
 
 
+-- ====================================================================
+-- Benchmarks ANTES DE CRIAR ÍNDICES E OTIMIZAÇÕES
+-- ====================================================================
+
+
 set search_path to benchmark_schema, public;
 
 DO $$
@@ -478,14 +483,14 @@ INSERT INTO benchmark_results (
     buffers_read
 ) VALUES (
     'Q18',
-    'antes',  -- ajuste conforme necessário ('antes' ou 'depois')
+    'antes',  
     0.525,
     4.358,
     0.525 + 4.358,
     353.99,
     8,
-    NULL,  -- não especificado no EXPLAIN ANALYZE
-    NULL   -- não especificado no EXPLAIN ANALYZE
+    NULL,  
+    NULL  
 );
 
 
@@ -609,7 +614,11 @@ INSERT INTO benchmark_results (
 END $$;
 
 
+-- ====================================================================
 -- CRIAR INDICES AQUI
+-- Crirar benchramks depois de criar índices
+-- ====================================================================================================================================================
+
 
 set search_path to bd054_schema, public;
 -- Tabelas principais
@@ -1060,7 +1069,9 @@ INSERT INTO benchmark_results (
 END $$;
 
 
+-- =======================================================================
 -- BENCHMARKS COM INDICES E OTIMIZAÇÕES AQUI
+-- ======================================================================
 
 
 DO $$
@@ -1241,7 +1252,10 @@ ORDER BY d.nome, sa.salario_bruto DESC;',
 
 END $$;
 
+
+-- ================================================================================
 -- PARA VER O RESULTADOS DOS BENCHMARKS
+-- ================================================================================
 
 SELECT * FROM benchmark_results;
 
@@ -1267,9 +1281,11 @@ ORDER BY
     END;
 
 
-    
+-- ================================================================================
 -- PARA LIMPAR OS RESULTADOS DOS BENCHMARKS
+-- ================================================================================
 
 set search_path to benchmark_schema, public;
 
 DROP TABLE IF EXISTS benchmark_results; 
+

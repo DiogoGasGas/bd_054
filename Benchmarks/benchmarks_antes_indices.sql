@@ -96,7 +96,7 @@ $$ LANGUAGE plpgsql;
 -- ====================================================================================================================================================
 -- ====================================================================================================================================================
 
--- Daqui para a frente no documento vamos invocar a funnção para documentar os dados relevantes sobre as queries
+-- Daqui para a frente no documento vamos invocar a função para documentar os dados relevantes sobre as queries
 
 set search_path to benchmark_schema, public;
 
