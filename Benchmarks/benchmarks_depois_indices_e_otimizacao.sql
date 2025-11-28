@@ -76,6 +76,25 @@ LIMIT 3;',
     );
 
 
+    PERFORM run_benchmark(
+      'WITH ContagemAderentes AS (
+    SELECT id_for, COUNT(id_fun) AS num_aderentes
+    FROM bd054_schema.teve_formacao
+    GROUP BY id_for
+)
+SELECT
+  f.id_for,
+  f.nome_formacao,
+  c.num_aderentes
+FROM bd054_schema.formacoes AS f
+JOIN ContagemAderentes AS c ON f.id_for = c.id_for
+WHERE c.num_aderentes > (
+    SELECT AVG(num_aderentes) FROM ContagemAderentes
+)
+ORDER BY c.num_aderentes DESC;',
+      'Q06',
+      'depois indices e otimizacao'
+    );
 
 
     PERFORM run_benchmark(

@@ -190,29 +190,28 @@ BEGIN
 
 
     -- Q06: Inserção manual dos resultados do benchmark
-    INSERT INTO benchmark_results(
-        query_name,
-        etapa,
-        planning_time,
-        execution_time,
-        total_time,
-        total_cost,
-        rows_returned,
-        buffers_hit,
-        buffers_read
-    )
-    VALUES(
-        'Q06',
-        'antes',
-        0.578,
-        3.580,
-        4.158,
-        5.16,
-        2,
-        NULL,
-        NULL
-    );
-
+    -- Query 6
+INSERT INTO benchmark_results (
+    query_name,
+    etapa,
+    planning_time,
+    execution_time,
+    total_time,
+    total_cost,
+    rows_returned,
+    buffers_hit,
+    buffers_read
+) VALUES (
+    'Q06',
+    'antes',  -- ajuste conforme necessário ('antes' ou 'depois')
+    0.226,
+    1.411,
+    0.226 + 1.411,
+    5.16,
+    2,
+    NULL,  -- não especificado no EXPLAIN ANALYZE
+    NULL   -- não especificado no EXPLAIN ANALYZE
+);
 
     PERFORM run_benchmark(
         'SELECT  
@@ -430,28 +429,27 @@ ORDER BY f.id_fun;',
 
 
     -- Q18: Inserção manual dos resultados do benchmark
-    INSERT INTO benchmark_results(
-        query_name,
-        etapa,
-        planning_time,
-        execution_time,
-        total_time,
-        total_cost,
-        rows_returned,
-        buffers_hit,
-        buffers_read
-    )
-    VALUES(
-        'Q18',
-        'antes',
-        2.601,
-        8.217,
-        10.818,
-        125.01,
-        8,
-        NULL,
-        NULL
-    );
+INSERT INTO benchmark_results (
+    query_name,
+    etapa,
+    planning_time,
+    execution_time,
+    total_time,
+    total_cost,
+    rows_returned,
+    buffers_hit,
+    buffers_read
+) VALUES (
+    'Q18',
+    'antes',  -- ajuste conforme necessário ('antes' ou 'depois')
+    0.525,
+    4.358,
+    0.525 + 4.358,
+    353.99,
+    8,
+    NULL,  -- não especificado no EXPLAIN ANALYZE
+    NULL   -- não especificado no EXPLAIN ANALYZE
+);
 
 
     PERFORM run_benchmark(

@@ -274,9 +274,6 @@ DROP INDEX IF EXISTS ind_dependentes_fem;
 -- =======================================================================================================================================================================================================================
 
 set search_path to bd_054_schema, public;
-drop index if exists idx_nome_completo;
-DROp index if exists idx_ferias_estado_numdias_desc;
-drop index if exists idx_ferias_estado_numdias;
 
 SELECT
     schemaname,
