@@ -1,6 +1,6 @@
 -- ===================================================================
 -- Neste ficheiro rescrevemos as queries originais de forma a otimizá-las.
--- Além disso implemntamos também gestão de transações.
+-- Além disso implementámos também gestão de transações.
 -- ===================================================================
 
 set search_path to bd054_schema, public;
