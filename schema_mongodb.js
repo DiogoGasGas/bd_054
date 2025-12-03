@@ -1,3 +1,111 @@
+
+
+{
+  $jsonSchema: {
+    bsonType: 'object',
+    required: [
+      'id_fun',
+      'nif',
+      'primeiro_nome',
+      'ultimo_nome'
+    ],
+    properties: {
+      id_fun: {
+        bsonType: 'int',
+        description: 'ID do funcionário (obrigatório)'
+      },
+      nif: {
+        bsonType: 'string',
+        description: 'NIF (obrigatório)'
+      },
+      primeiro_nome: {
+        bsonType: 'string',
+        description: 'Primeiro nome (obrigatório)'
+      },
+      ultimo_nome: {
+        bsonType: 'string',
+        description: 'Último nome (obrigatório)'
+      },
+      nome_rua: {
+        bsonType: 'string',
+        description: 'Nome da rua (opcional)'
+      },
+      nome_localidade: {
+        bsonType: 'string',
+        description: 'Nome da localidade (opcional)'
+      },
+      codigo_postal: {
+        bsonType: 'string',
+        description: 'Código postal (opcional)'
+      },
+      num_telemovel: {
+        bsonType: 'string',
+        description: 'Número de telemóvel (opcional)'
+      },
+      email: {
+        bsonType: 'string',
+        description: 'Email (opcional)'
+      },
+      data_nascimento: {
+        bsonType: 'string',
+        description: 'Data de nascimento (string, opcional)'
+      },
+      cargo: {
+        bsonType: 'string',
+        description: 'Cargo (opcional)'
+      }
+    }
+  }
+}
+
+{
+  $jsonSchema: {
+    bsonType: 'object',
+    required: [
+      'id_depart',
+      'nome'
+    ],
+    properties: {
+      id_depart: {
+        bsonType: 'int',
+        description: 'ID do departamento (inteiro, obrigatório)'
+      },
+      nome: {
+        bsonType: 'string',
+        'enum': [
+          'Recursos Humanos',
+          'Tecnologia da Informação',
+          'Financeiro',
+          'Marketing',
+          'Vendas',
+          'Qualidade',
+          'Atendimento ao Cliente',
+          'Jurídico'
+        ],
+        description: 'Nome do departamento (apenas valores permitidos, obrigatório)'
+      },
+      id_gerente: {
+        bsonType: 'int',
+        description: 'ID do gerente (referência para funcionarios.id_fun, único, opcional)'
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 db.createCollection("candidato_a", {
   validator: {
     $jsonSchema: {
