@@ -1,20 +1,33 @@
-Write-Host "--- A INICIAR MIGRACAO COMPLETA ---" -ForegroundColor Cyan
+Write-Host "--- A INICIAR MIGRACAO TOTAL (6 COLECOES) ---" -ForegroundColor Cyan
 
-# 0. LIMPEZA (Opcional mas recomendado: apaga o ficheiro antigo para evitar erros)
-if (Test-Path "dados_final.json") { Remove-Item "dados_final.json" }
+# Lista dos ficheiros que vamos criar
+$ficheiros = @("departamentos.json", "formacoes.json", "candidatos.json", "avaliacoes.json", "vagas.json", "funcionarios.json")
 
-# 1. EXPORTAR
-Write-Host "1. A extrair dados complexos do PostgreSQL..."
+# 0. LIMPEZA INICIAL
+foreach ($f in $ficheiros) {
+    if (Test-Path $f) { Remove-Item $f }
+}
+
+# 1. EXPORTAR (Postgres -> JSON)
+Write-Host "1. A extrair dados de todas as tabelas..."
 psql -h appserver.alunos.di.fc.ul.pt -U bd054 -d bd054 -f exportar_dados.sql
 
-# Verifica se o ficheiro foi criado
-if (Test-Path "dados_final.json") {
-    
-    # 2. IMPORTAR
-    Write-Host "2. A importar para a colecao 'funcionarios_migrados' no MongoDB..."
-    mongoimport --uri "mongodb://bd054:bd054@appserver.alunos.di.fc.ul.pt:27017/bd054?authSource=bd054" --collection funcionarios_migrados --file dados_final.json --drop
+# 2. IMPORTAR (JSON -> MongoDB)
+Write-Host "2. A importar para o MongoDB..."
 
-    Write-Host "--- SUCESSO! MIGRACAO CONCLUIDA ---" -ForegroundColor Green
-} else {
-    Write-Host "ERRO: Falha ao criar o ficheiro JSON." -ForegroundColor Red
+# Configuração da ligação Mongo
+$mongoUri = "mongodb://bd054:bd054@appserver.alunos.di.fc.ul.pt:27017/bd054?authSource=bd054"
+
+foreach ($f in $ficheiros) {
+    if (Test-Path $f) {
+        # O nome da coleção será o nome do ficheiro sem o ".json" (ex: 'vagas')
+        $colecao = [System.IO.Path]::GetFileNameWithoutExtension($f)
+        
+        Write-Host "   -> Importar '$colecao'..."
+        mongoimport --uri $mongoUri --collection $colecao --file $f --drop
+    } else {
+        Write-Host "   ERRO: O ficheiro $f nao foi criado!" -ForegroundColor Red
+    }
 }
+
+Write-Host "--- MIGRACAO CONCLUIDA COM SUCESSO! ---" -ForegroundColor Green
