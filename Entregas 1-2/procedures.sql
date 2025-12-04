@@ -610,7 +610,7 @@ ORDER BY f.id_fun ASC; -- ordena por ID
 
 -- View que mostra funcionários, seus departamentos e salários
 
-select * from vw_funcionarios_departamentos
+
 CREATE OR REPLACE VIEW vw_funcionarios_departamentos AS
 SELECT 
     f.id_fun,
