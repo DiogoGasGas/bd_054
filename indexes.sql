@@ -1,5 +1,8 @@
--- (nao testei nada)
--- o 4 indice, o composto, implica uma alteração do codigo das queries que ele influencia
+-- ===================================================================
+-- Neste ficheriro criamos índices que possam ajudar na otimização das queries.
+-- Além disso, fazemos também uma análise de trade-offs entre interrogações e atualizações da base de dados.
+-- ===================================================================
+
 
 ---- Criação de índices para otimização de consultas
 
@@ -8,10 +11,6 @@ Por definição, índices B-tree são criados para colunas com alta cardinalidad
 sendo úteis para igualdades e intervalos. Índices Hash são mais eficientes para consultas de igualdade em colunas com baixa cardinalidade.
 -- Sem qualquer indicação do contrário, os índices são criados como B-tree.
 */
-
--- =======================================================================================================================================================================================================================
--- =======================================================================================================================================================================================================================
-
 
 
 set search_path to bd054_schema, public;
@@ -248,7 +247,7 @@ CREATE INDEX ind_dependentes_fem ON dependentes(id_fun) WHERE sexo = 'Feminino';
 
 
 
--- sugestoes a fazer , historico de empresas, formacoes, nome do funcionario
+-- APAGAR INDICES CRIADOS ANTERIORMENTE
 ------------------------------------------------------
 
 set search_path to bd054_schema, public;
@@ -272,3 +271,310 @@ DROP INDEX IF EXISTS ind_ferias_estado_numdias_desc;
 DROP INDEX IF EXISTS ind_hist_emp_idfun_nome; 
 DROP INDEX IF EXISTS ind_dependentes_fem;
 -- =======================================================================================================================================================================================================================
+
+
+
+-- ====================================================================
+-- ANALISE DE TRADE OFFS ENTRE INTERROGAÇOES E ATUALIZAÇOES
+-- ====================================================================
+
+SET search_path TO bd054_schema, public;
+
+-- ====================================================================
+--TESTE 1
+-- Tabela Beneficios
+-- Comparação: Sem Índices vs Com Índices (Depart + Nome Completo)
+-- ====================================================================
+
+-- 1. Limpeza inicial (caso tenhas corrido antes)
+DROP TABLE IF EXISTS beneficios_bench;
+DROP TABLE IF EXISTS resultados_benchmark;
+DROP INDEX IF EXISTS bench_ind_tipo;
+DROP INDEX IF EXISTS bench_hash_tipo;
+DROP INDEX IF EXISTS bench_ind_valor;
+
+
+-- 2. Preparar as tabelas
+-- Tabela 'bench' é uma cópia vazia da tabela beneficios
+CREATE TABLE beneficios_bench AS SELECT * FROM beneficios WHERE 1=0;
+
+-- Tabela para guardar os tempos (para te mostrar no fim)
+CREATE TEMPORARY TABLE resultados_benchmark (
+    cenario VARCHAR(50),
+    tempo_execucao INTERVAL
+);
+
+-- ====================================================================
+-- TESTE A: Inserção SEM Índices
+-- ====================================================================
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    inicio := clock_timestamp();
+
+    -- Inserir 100.000 linhas
+    INSERT INTO beneficios_bench (id_fun, data_inicio, tipo, valor)
+    SELECT 
+        (random() * 1000)::int, 
+        CURRENT_DATE + (i || ' days')::interval, 
+        CASE WHEN (i % 2) = 0 THEN 'Seguro Saúde' ELSE 'Subsídio Transporte' END,
+        (random() * 200)::numeric(10,2)
+    FROM generate_series(1, 100000) AS i;
+
+    fim := clock_timestamp();
+    
+    -- Guardar o tempo na tabela de resultados
+    INSERT INTO resultados_benchmark VALUES ('1. Sem Índices', fim - inicio);
+END $$;
+
+-- Limpar os dados para o próximo teste
+TRUNCATE beneficios_bench;
+
+-- ====================================================================
+-- TESTE B: Inserção COM Índices
+-- ====================================================================
+
+-- Recriar a estrutura pesada de índices que tens no projeto
+CREATE INDEX bench_ind_tipo ON beneficios_bench(tipo);           -- B-Tree
+CREATE INDEX bench_hash_tipo ON beneficios_bench USING HASH(tipo); -- Hash (Redundante)
+CREATE INDEX bench_ind_valor ON beneficios_bench(valor);         -- B-Tree
+
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    inicio := clock_timestamp();
+
+    -- Inserir as mesmas 100.000 linhas
+    INSERT INTO beneficios_bench (id_fun, data_inicio, tipo, valor)
+    SELECT 
+        (random() * 1000)::int, 
+        CURRENT_DATE + (i || ' days')::interval, 
+        CASE WHEN (i % 2) = 0 THEN 'Seguro Saúde' ELSE 'Subsídio Transporte' END,
+        (random() * 200)::numeric(10,2)
+    FROM generate_series(1, 100000) AS i;
+
+    fim := clock_timestamp();
+    
+    -- Guardar o tempo
+    INSERT INTO resultados_benchmark VALUES ('2. Com Índices', fim - inicio);
+END $$;
+
+-- ====================================================================
+-- RESULTADO FINAL
+-- ====================================================================
+SELECT * FROM resultados_benchmark ORDER BY cenario;
+
+-- Limpeza final (opcional, se quiseres manter a tabela para ver, comenta estas linhas)
+DROP TABLE beneficios_bench;
+DROP TABLE resultados_benchmark;
+
+
+
+-- ====================================================================
+--TESTE 2
+-- Tabela Funcionários
+-- Comparação: Sem Índices vs Com Índices (Depart + Nome Completo)
+-- ====================================================================
+
+SET search_path TO bd054_schema, public;
+
+-- 1. Limpeza inicial
+DROP TABLE IF EXISTS funcionarios_bench;
+DROP TABLE IF EXISTS resultados_benchmark_fun;
+
+-- 2. Preparar tabela de teste e tabela de resultados
+-- Cria uma cópia da estrutura da tabela funcionarios (sem chaves/constraints para isolar o teste dos índices)
+CREATE TABLE funcionarios_bench AS SELECT * FROM funcionarios WHERE 1=0;
+
+CREATE TEMPORARY TABLE resultados_benchmark_fun (
+    cenario VARCHAR(50),
+    tempo_execucao INTERVAL
+);
+
+-- ====================================================================
+-- TESTE A: Inserção SEM Índices
+-- ====================================================================
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    inicio := clock_timestamp();
+
+    -- Inserir 100.000 funcionários fictícios
+    INSERT INTO funcionarios_bench (id_fun, nif, primeiro_nome, ultimo_nome, id_depart, email, data_nascimento)
+    SELECT 
+        i, 
+        (100000000 + i)::varchar, -- NIF único fictício
+        'Funcionario' || i, 
+        'Teste' || (i % 100), 
+        (random() * 7 + 1)::int, -- Departamentos 1 a 8
+        'func' || i || '@empresa_teste.pt',
+        '1990-01-01'::date + (i % 3650)::int -- Data nasc aleatória
+    FROM generate_series(1, 100000) AS i;
+
+    fim := clock_timestamp();
+    
+    INSERT INTO resultados_benchmark_fun VALUES ('1. Sem Índices', fim - inicio);
+END $$;
+
+-- Limpar tabela para o próximo teste
+TRUNCATE funcionarios_bench;
+
+-- ====================================================================
+-- TESTE B: Inserção COM Índices
+-- ====================================================================
+
+-- 1. Criar o índice pedido pelo utilizador
+CREATE INDEX bench_ind_fun_depart ON funcionarios_bench(id_depart);
+
+-- 2. Criar também o índice funcional (do indexes.sql) para tornar o teste mais "pesado" e realista
+
+
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    inicio := clock_timestamp();
+
+    -- Inserir os mesmos 100.000 funcionários
+    INSERT INTO funcionarios_bench (id_fun, nif, primeiro_nome, ultimo_nome, id_depart, email, data_nascimento)
+    SELECT 
+        i, 
+        (100000000 + i)::varchar,
+        'Funcionario' || i, 
+        'Teste' || (i % 100), 
+        (random() * 7 + 1)::int,
+        'func' || i || '@empresa_teste.pt',
+        '1990-01-01'::date + (i % 3650)::int
+    FROM generate_series(1, 100000) AS i;
+
+    fim := clock_timestamp();
+    
+    INSERT INTO resultados_benchmark_fun VALUES ('2. Com Índices', fim - inicio);
+END $$;
+
+-- ====================================================================
+-- RESULTADO FINAL
+-- ====================================================================
+SELECT * FROM resultados_benchmark_fun ORDER BY cenario;
+
+-- Limpeza final
+DROP TABLE funcionarios_bench;
+DROP TABLE resultados_benchmark_fun;
+
+
+
+
+-- ====================================================================
+-- TESTE 3: Tabela Funcionarios (2 Colunas + 2 Índices)
+-- Update em massa com e sem índices
+-- ====================================================================
+
+SET search_path TO bd054_schema, public;
+
+-- 1. Limpeza inicial
+DROP TABLE IF EXISTS funcionarios_update_bench;
+DROP TABLE IF EXISTS resultados_update_bench;
+
+-- Tabela para guardar os tempos
+CREATE TEMPORARY TABLE resultados_update_bench (
+    cenario VARCHAR(50),
+    tempo_execucao INTERVAL
+);
+
+-- ====================================================================
+-- PREPARAÇÃO (Criação da Tabela Base)
+-- ====================================================================
+CREATE TABLE funcionarios_update_bench (
+    id_fun INT,
+    primeiro_nome VARCHAR(50),
+    ultimo_nome VARCHAR(50),
+    id_depart INT
+);
+
+-- ====================================================================
+-- TESTE A: Update SEM Índices
+-- ====================================================================
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    -- 1. Popular a tabela com 100.000 registos
+    TRUNCATE funcionarios_update_bench;
+    
+    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome, id_depart)
+    SELECT 
+        i, 
+        'Joao' || i, 
+        'Silva' || i,
+        (random() * 7 + 1)::int -- Gerar departamento aleatório
+    FROM generate_series(1, 100000) AS i;
+
+    -- 2. Medir o UPDATE
+    -- Alteramos o PRIMEIRO e o ÚLTIMO nome
+    inicio := clock_timestamp();
+
+    UPDATE funcionarios_update_bench 
+    SET primeiro_nome = 'Maria' || id_fun,
+        ultimo_nome = 'Pereira' || id_fun;
+
+    fim := clock_timestamp();
+    
+    INSERT INTO resultados_update_bench VALUES ('1. Update Sem Índice', fim - inicio);
+END $$;
+
+-- ====================================================================
+-- TESTE B: Update COM Índices (Funcional + Departamento)
+-- ====================================================================
+DO $$
+DECLARE
+    inicio TIMESTAMP;
+    fim TIMESTAMP;
+BEGIN
+    -- 1. Reset aos dados
+    TRUNCATE funcionarios_update_bench;
+    
+    INSERT INTO funcionarios_update_bench (id_fun, primeiro_nome, ultimo_nome, id_depart)
+    SELECT 
+        i, 
+        'Joao' || i, 
+        'Silva' || i,
+        (random() * 7 + 1)::int
+    FROM generate_series(1, 100000) AS i;
+
+    -- 2. Criar os Índices
+    -- Índice Funcional (O Postgres tem de recalcular a concatenação dos dois novos nomes)
+    CREATE INDEX bench_ind_nome_completo ON funcionarios_update_bench ((primeiro_nome || ' ' || ultimo_nome));
+    
+    -- Índice de Departamento (Adicionado conforme pedido, simula tabela real)
+    CREATE INDEX bench_ind_fun_depart ON funcionarios_update_bench(id_depart);
+
+    -- 3. Medir o UPDATE
+    inicio := clock_timestamp();
+
+    UPDATE funcionarios_update_bench 
+    SET primeiro_nome = 'Maria' || id_fun,
+        ultimo_nome = 'Pereira' || id_fun;
+
+    fim := clock_timestamp();
+    
+    INSERT INTO resultados_update_bench VALUES ('2. Update Com Índices', fim - inicio);
+END $$;
+
+-- ====================================================================
+-- RESULTADO FINAL
+-- ====================================================================
+SELECT * FROM resultados_update_bench ORDER BY cenario;
+
+-- Limpeza final
+DROP TABLE funcionarios_update_bench;
+DROP TABLE resultados_update_bench;
+
+
