@@ -610,6 +610,7 @@ ORDER BY f.id_fun ASC; -- ordena por ID
 
 -- View que mostra funcionários, seus departamentos e salários
 
+select * from vw_funcionarios_departamentos
 CREATE OR REPLACE VIEW vw_funcionarios_departamentos AS
 SELECT 
     f.id_fun,
@@ -650,10 +651,10 @@ JOIN funcionarios f ON f.id_depart = d.id_depart
 JOIN salario s ON s.id_fun = f.id_fun
 GROUP BY d.id_depart, d.nome; -- agrupa por departamento
 
-
+select * from vw_media_salarial_departamento;
 
 -- View que apresenta formações e número de aderentes por formação
-
+set search_path TO bd054_schema, public;
 CREATE OR REPLACE VIEW vw_formacoes_funcionarios AS
 SELECT 
     f.id_fun,
@@ -667,6 +668,7 @@ FROM funcionarios f
 JOIN teve_formacao fa ON f.id_fun = fa.id_fun
 JOIN formacoes fo ON fa.id_for = fo.id_for;
 
+select * from vw_formacoes_funcionarios;
 
 
 -- View que mostra vagas e o número de candidatos associados
