@@ -33,8 +33,18 @@ db.vagas.createIndex({ "candidaturas_recebidas": 1 }) // Para $size()
 // 6️⃣ Queries combinadas por departamento e histórico salarial (Query 12, 13, 16)
 db.funcionarios.createIndex({ "profissional.departamento_id": 1, "historico_salarial.inicio": -1 })
 
+
+
+/*
 // ==============================
-// 7️⃣ Índices adicionais importantes
-// Para $group ou join por _id
-db.funcionarios.createIndex({ "_id": 1 })
-db.departamentos.createIndex({ "_id": 1 })
+// 1️⃣ Apagar todos os índices exceto _id
+// Coleção: funcionarios
+db.funcionarios.dropIndexes()
+
+// Coleção: departamentos
+db.departamentos.dropIndexes()
+
+// Coleção: vagas
+db.vagas.dropIndexes()
+
+*/
