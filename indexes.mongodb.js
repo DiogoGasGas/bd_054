@@ -57,3 +57,10 @@ Index nos campos usados para join (lookup) ou agregação.
 $size ainda precisa percorrer array, mas índice ajuda se fizermos $match antes.
 */
 
+
+//Queries combinadas por departamento e histórico salarial (Query 12, 13, 16)
+db.funcionarios.createIndex({ "profissional.id_depart_sql": 1, "historico_salarial.inicio": -1 })
+/*Justificação:
+
+Índice composto acelera queries que filtram por departamento e ordenam por salário.
+*/
