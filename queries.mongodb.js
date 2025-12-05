@@ -434,7 +434,6 @@ db.funcionarios.aggregate([
 ]);
 */
 
-
 // Querie 15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
 /*
 db.funcionarios.aggregate([
@@ -664,4 +663,90 @@ db.funcionarios.aggregate([
   },
   { $sort: { nome_departamento: 1, salario_atual: -1 } }
 ]);
+*/
+
+
+// ============================================================================
+// OPERAÇÕES CRUD (Create, Read, Update, Delete)
+// Usaremos o mesmo funcionário em todos os exemplos
+// ============================================================================
+
+// Exemplo de Create: Inserir um novo funcionário
+/*
+db.funcionarios.insertOne({
+  id_sql: 1500,
+  identificacao: {
+    nome_completo: 'Marco Casquilho',
+    nif: '9677967710',
+    data_nascimento: '1930-05-11'
+  },
+  contactos: {
+    email: 'asquilho@gmail.com',
+    telemovel: '986665123',
+    morada: {
+      rua: 'Rua das Flores',
+      cidade: 'Rio Maior',
+      cp: '2040-123'
+    }
+  },
+  profissional: {
+    cargo: 'Engenheiro de Software',
+    id_depart_sql: 2
+  },
+  autenticacao: {
+    password: 'senha123',
+    permissoes: ['leitura', 'escrita']
+  },
+  dependentes: [],
+  historico_empresas: [
+    {
+      empresa: 'Tech Company',
+      cargo: 'Junior Developer',
+      inicio: '2020-01-15',
+      fim: '2022-12-31'
+    }
+  ],
+  formacoes_realizadas: [],
+  registo_ausencias: {
+    ferias: [],
+    faltas: []
+  },
+  historico_salarial: [
+    {
+      inicio: '2023-01-01',
+      fim: null,
+      base: 2500,
+      liquido: 2000,
+      beneficios: [
+        {
+          tipo: 'Seguro Saúde',
+          valor: 75
+        }
+      ]
+    }
+  ]
+});
+
+// Exemplo de Read (simples): Encontrar funcionário por NIF e por ID
+
+db.funcionarios.findOne({ "identificacao.nif": "9677967710" });
+db.funcionarios.findOne({ id_sql: 1500 });
+
+// Exemplo Read (Busca em Embeddings): Encontrar funcionários que já trabalharam na empresa "Tech Company"
+
+db.funcionarios.find(
+  { 'historico_empresas.empresa': 'Tech Company' }, 
+  { "identificacao.nome_completo": 1, 'historico_empresas.$': 1, _id: 0 }
+);
+
+// Exemplo de Update: Atualizar o email de um funcionário
+
+db.funcionarios.updateOne(
+  { id_sql: 1500 },
+  { $set: { 'contactos.email': 'marco.casquilho@example.com' } }
+);
+
+// Exemplo de Delete: Remover um funcionário pelo ID
+
+db.funcionarios.deleteOne({ id_sql: 1500 });
 */
