@@ -11,10 +11,6 @@ O índice em historico_salarial.inicio acelera sort e o $group para pegar o últ
 
 
 
-
-
-
-
 // Na coleção departamentos
 db.departamentos.createIndex({ id_sql: 1 })
 
@@ -41,3 +37,23 @@ Justificação:
 
 Índice em datas de férias ajuda queries que ordenam ou filtram por períodos de férias.~
 */
+
+//Queries de formação (Query 6, 18, 20)
+db.funcionarios.createIndex({ "formacoes_realizadas.id_formacao_sql": 1 })
+db.funcionarios.createIndex({ "profissional.id_depart_sql": 1 })
+
+/*Justificação:
+
+Ajudam $unwind + $group e cálculo de taxas.
+*/
+
+//Queries com dependentes e vagas (Query 10, 11)
+db.funcionarios.createIndex({ "profissional.id_depart_sql": 1 })
+db.vagas.createIndex({ "id_depart_sql": 1 })
+db.vagas.createIndex({ "candidaturas_recebidas": 1 }) // Para $size()
+/*Justificação:
+Index nos campos usados para join (lookup) ou agregação.
+
+$size ainda precisa percorrer array, mas índice ajuda se fizermos $match antes.
+*/
+
