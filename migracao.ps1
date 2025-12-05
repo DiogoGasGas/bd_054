@@ -9,12 +9,12 @@ Write-Host "--- A INICIAR MIGRACAO TOTAL (6 COLECOES) ---" -ForegroundColor Cyan
 # 0. LIMPEZA INICIAL
 # (Apaga os ficheiros antigos um a um para garantir que não sobra lixo)
 # ---------------------------------------------------------
-if (Test-Path "departamentos.json") { Remove-Item "departamentos.json" }
-if (Test-Path "formacoes.json")     { Remove-Item "formacoes.json" }
-if (Test-Path "candidatos.json")    { Remove-Item "candidatos.json" }
-if (Test-Path "avaliacoes.json")    { Remove-Item "avaliacoes.json" }
-if (Test-Path "vagas.json")         { Remove-Item "vagas.json" }
-if (Test-Path "funcionarios.json")  { Remove-Item "funcionarios.json" }
+if (Test-Path "Ficheiros Migracao/departamentos.json") { Remove-Item "Ficheiros Migracao/departamentos.json" }
+if (Test-Path "Ficheiros Migracao/formacoes.json")     { Remove-Item "Ficheiros Migracao/formacoes.json" }
+if (Test-Path "Ficheiros Migracao/candidatos.json")    { Remove-Item "Ficheiros Migracao/candidatos.json" }
+if (Test-Path "Ficheiros Migracao/avaliacoes.json")    { Remove-Item "Ficheiros Migracao/avaliacoes.json" }
+if (Test-Path "Ficheiros Migracao/vagas.json")         { Remove-Item "Ficheiros Migracao/vagas.json" }
+if (Test-Path "Ficheiros Migracao/funcionarios.json")  { Remove-Item "Ficheiros Migracao/funcionarios.json" }
 
 # ---------------------------------------------------------
 # 1. EXPORTAR (Postgres -> JSON)
@@ -31,39 +31,39 @@ psql -h appserver.alunos.di.fc.ul.pt -U bd054 -d bd054 -f exportar_dados.sql
 Write-Host "2. A importar para o MongoDB..."
 
 # --- Departamentos ---
-if (Test-Path "departamentos.json") {
+if (Test-Path "Ficheiros Migracao/departamentos.json") {
     Write-Host "   -> Importar 'departamentos'..."
-    mongoimport --uri $mongoUri --collection departamentos --file departamentos.json --drop
+    mongoimport --uri $mongoUri --collection departamentos --file "Ficheiros Migracao/departamentos.json" --drop
 }
 
 # --- Formacoes ---
-if (Test-Path "formacoes.json") {
+if (Test-Path "Ficheiros Migracao/formacoes.json") {
     Write-Host "   -> Importar 'formacoes'..."
-    mongoimport --uri $mongoUri --collection formacoes --file formacoes.json --drop
+    mongoimport --uri $mongoUri --collection formacoes --file "Ficheiros Migracao/formacoes.json" --drop
 }
 
 # --- Candidatos ---
-if (Test-Path "candidatos.json") {
+if (Test-Path "Ficheiros Migracao/candidatos.json") {
     Write-Host "   -> Importar 'candidatos'..."
-    mongoimport --uri $mongoUri --collection candidatos --file candidatos.json --drop
+    mongoimport --uri $mongoUri --collection candidatos --file "Ficheiros Migracao/candidatos.json" --drop
 }
 
 # --- Avaliacoes ---
-if (Test-Path "avaliacoes.json") {
+if (Test-Path "Ficheiros Migracao/avaliacoes.json") {
     Write-Host "   -> Importar 'avaliacoes'..."
-    mongoimport --uri $mongoUri --collection avaliacoes --file avaliacoes.json --drop
+    mongoimport --uri $mongoUri --collection avaliacoes --file "Ficheiros Migracao/avaliacoes.json" --drop
 }
 
 # --- Vagas ---
-if (Test-Path "vagas.json") {
+if (Test-Path "Ficheiros Migracao/vagas.json") {
     Write-Host "   -> Importar 'vagas'..."
-    mongoimport --uri $mongoUri --collection vagas --file vagas.json --drop
+    mongoimport --uri $mongoUri --collection vagas --file "Ficheiros Migracao/vagas.json" --drop
 }
 
 # --- Funcionarios ---
-if (Test-Path "funcionarios.json") {
+if (Test-Path "Ficheiros Migracao/funcionarios.json") {
     Write-Host "   -> Importar 'funcionarios'..."
-    mongoimport --uri $mongoUri --collection funcionarios --file funcionarios.json --drop
+    mongoimport --uri $mongoUri --collection funcionarios --file "Ficheiros Migracao/funcionarios.json" --drop
 }
 
 Write-Host "--- MIGRACAO CONCLUIDA COM SUCESSO! ---" -ForegroundColor Green
