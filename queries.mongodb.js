@@ -28,6 +28,7 @@ db.funcionarios.aggregate([
 ]);
 */
 
+
 // Query 3: Total de remuneração por departamento
 /*
 db.funcionarios.aggregate([
@@ -70,6 +71,7 @@ db.funcionarios.aggregate([
   { $sort: { tot_remun: -1 } }
 ]);
 */
+
 
 // Query 4: Top 3 funcionários com maior salário líquido
 /*
@@ -299,6 +301,49 @@ db.funcionarios.aggregate([
 */
 
 
+
+// Query 10: Dependentes e funcionário respetivo
+/*
+db.funcionarios.aggregate([
+  { $unwind: "$dependentes" },
+  
+  // Buscar nome departamento
+  {
+    $lookup: {
+      from: "departamentos",
+      localField: "profissional.id_depart_sql",
+      foreignField: "id_sql",
+      as: "dep"
+    }
+  },
+  
+  {
+    $project: {
+      id_fun: "$id_sql",
+      nome_funcionario: "$identificacao.nome_completo",
+      nome_dep: { $first: "$dep.nome" },
+      dependente_info: { 
+        $concat: ["$dependentes.nome", " (", "$dependentes.parentesco", ")"] 
+      }
+    }
+  },
+  
+  // Agrupar de volta para fazer a lista (STRING_AGG do SQL)
+  {
+    $group: {
+      _id: "$id_fun",
+      nome_funcionario: { $first: "$nome_funcionario" },
+      nome_dep: { $first: "$nome_dep" },
+      dependentes: { $push: "$dependente_info" } // Cria array
+    }
+  },
+  
+  // O SQL faz STRING_AGG, aqui podemos deixar em array ou juntar numa string se a aplicação precisar
+  { $sort: { nome_funcionario: 1 } }
+]);
+*/
+
+
 // Query 11. Vagas e candidatos (Baseada na coleção Vagas)
 /*
 db.vagas.aggregate([
@@ -389,11 +434,245 @@ db.funcionarios.aggregate([
 ]);
 */
 
-// Daqui para a frente iremos relaizar operações CRUD (Create, Read, Update, Delete), 
-// para exemplificar, usaremos o mesmo funcionário em todos os exemplos.
+// Querie 15. Departamentos cuja média salarial é maior que a média total, o seu número de funcionários e a sua média
+/*
+db.funcionarios.aggregate([
+  // 1. Isolar salário mais recente
+  { $unwind: "$historico_salarial" },
+  { $sort: { "historico_salarial.inicio": -1 } },
+  {
+    $group: {
+      _id: "$id_sql",
+      id_depart: { $first: "$profissional.id_depart_sql" },
+      salario_atual: { $first: "$historico_salarial.base" }
+    }
+  },
+
+  // 2. Calcular Média Global (Window Function)
+  {
+    $setWindowFields: {
+      partitionBy: null,
+      output: { media_global: { $avg: "$salario_atual" } }
+    }
+  },
+
+  // 3. Agrupar por Departamento
+  {
+    $group: {
+      _id: "$id_depart",
+      num_funcionarios: { $sum: 1 },
+      media_departamento: { $avg: "$salario_atual" },
+      media_global: { $first: "$media_global" }
+    }
+  },
+
+  // 4. Filtrar: Média Dept > Média Global
+  {
+    $match: {
+      $expr: { $gt: ["$media_departamento", "$media_global"] }
+    }
+  },
+
+  // 5. Lookup Nome Departamento
+  {
+    $lookup: {
+      from: "departamentos",
+      localField: "_id",
+      foreignField: "id_sql",
+      as: "dep"
+    }
+  },
+
+  {
+    $project: {
+      Nome: { $first: "$dep.nome" },
+      Numero_Funcionarios: "$num_funcionarios",
+      Media_Salarial_Departamento: { $round: ["$media_departamento", 2] }
+    }
+  },
+  { $sort: { Media_Salarial_Departamento: -1 } }
+]);
+*/
+
+
+
+// Query 17: Funcionários sem faltas registadas
+/*
+db.funcionarios.aggregate([
+  {
+    $project: {
+      id_fun: "$id_sql",
+      nome_completo: "$identificacao.nome_completo",
+      total_faltas: { 
+        $size: { $ifNull: ["$registo_ausencias.faltas", []] } 
+      }
+    }
+  },
+  {
+    $match: {
+      total_faltas: 0
+    }
+  },
+  { $sort: { id_fun: 1 } }
+]);
+*/
+
+
+// Querie 18. Taxa de aderência a formações por departamento
+/*
+db.funcionarios.aggregate([
+  // 1. Calcular se funcionário tem formação (1 ou 0) e qual o seu departamento
+  {
+    $project: {
+      id_depart: "$profissional.id_depart_sql",
+      tem_formacao: { 
+        $cond: { if: { $gt: [{ $size: "$formacoes_realizadas" }, 0] }, then: 1, else: 0 } 
+      }
+    }
+  },
+
+  // 2. Agrupar por departamento
+  {
+    $group: {
+      _id: "$id_depart",
+      total_funcs: { $sum: 1 },
+      total_com_formacao: { $sum: "$tem_formacao" }
+    }
+  },
+
+  // 3. Calcular Taxa e Buscar Nome
+  {
+    $lookup: {
+      from: "departamentos",
+      localField: "_id",
+      foreignField: "id_sql",
+      as: "dep"
+    }
+  },
+
+  {
+    $project: {
+      nome: { $first: "$dep.nome" },
+      taxa_adesao: {
+        $round: [
+          { $multiply: [{ $divide: ["$total_com_formacao", "$total_funcs"] }, 100] }, 
+          2
+        ]
+      }
+    }
+  },
+  { $sort: { taxa_adesao: -1 } }
+]);
+*/
+
+
+
+// Query 19: Funcionários que trabalharam na empresa Moura, salário > 1500 e têm Seguro Saúde
+/*
+db.funcionarios.aggregate([
+  // 1. Filtrar quem trabalhou na "Moura" (Histórico)
+  { $match: { "historico_empresas.empresa": "Moura" } },
+
+  // 2. Aceder ao histórico salarial
+  { $unwind: "$historico_salarial" },
+
+  // 3. Ordenar por data para garantir que o primeiro é o mais recente (Igual ao MAX data_inicio)
+  { $sort: { "historico_salarial.inicio": -1 } },
+
+  // 4. Agrupar para ficar apenas com o registo salarial MAIS RECENTE
+  {
+    $group: {
+      _id: "$id_sql",
+      nome_completo: { $first: "$identificacao.nome_completo" },
+      salario_atual: { $first: "$historico_salarial.base" },
+      beneficios: { $first: "$historico_salarial.beneficios" },
+      trabalhou_em: { $first: "Moura" } // Já sabemos que é Moura pelo filtro inicial
+    }
+  },
+
+  // 5. Aplicar os filtros de Salário e Benefício
+  {
+    $match: {
+      "salario_atual": { $gt: 1500 },
+      "beneficios.tipo": "Seguro Saúde"
+    }
+  },
+
+  // 6. Projeção final
+  {
+    $project: {
+      nome_completo: 1,
+      salario_atual: 1,
+      tipo_beneficio: "Seguro Saúde",
+      trabalhou_em: 1,
+      _id: 0
+    }
+  }
+]);
+*/
+
+
+// Query 20. Listar os funcionários que ganham acima da média salarial do seu próprio departamento, indicando-o, mostrando também o número de formações concluídas
+/*
+db.funcionarios.aggregate([
+  // 1. Isolar salário atual
+  { $unwind: "$historico_salarial" },
+  { $sort: { "historico_salarial.inicio": -1 } },
+  {
+    $group: {
+      _id: "$id_sql",
+      nome_completo: { $first: "$identificacao.nome_completo" },
+      id_depart: { $first: "$profissional.id_depart_sql" },
+      salario_atual: { $first: "$historico_salarial.base" },
+      num_formacoes: { $first: { $size: "$formacoes_realizadas" } }
+    }
+  },
+
+  // 2. Calcular Média DO DEPARTAMENTO (PartitionBy id_depart)
+  {
+    $setWindowFields: {
+      partitionBy: "$id_depart",
+      output: { media_departamento: { $avg: "$salario_atual" } }
+    }
+  },
+
+  // 3. Filtrar quem ganha mais que a média do seu próprio grupo
+  {
+    $match: {
+      $expr: { $gt: ["$salario_atual", "$media_departamento"] }
+    }
+  },
+
+  // 4. Lookup Nome Departamento
+  {
+    $lookup: {
+      from: "departamentos",
+      localField: "id_depart",
+      foreignField: "id_sql",
+      as: "dep"
+    }
+  },
+
+  {
+    $project: {
+      nome_completo: 1,
+      salario_atual: 1,
+      nome_departamento: { $first: "$dep.nome" },
+      num_formacoes: 1
+    }
+  },
+  { $sort: { nome_departamento: 1, salario_atual: -1 } }
+]);
+*/
+
+
+// ============================================================================
+// OPERAÇÕES CRUD (Create, Read, Update, Delete)
+// Usaremos o mesmo funcionário em todos os exemplos
+// ============================================================================
 
 // Exemplo de Create: Inserir um novo funcionário
-
+/*
 db.funcionarios.insertOne({
   id_sql: 1500,
   identificacao: {
@@ -448,26 +727,26 @@ db.funcionarios.insertOne({
   ]
 });
 
-// Exemplo de Read(simples): Encontrar funcionário por NIF e por ID
+// Exemplo de Read (simples): Encontrar funcionário por NIF e por ID
 
 db.funcionarios.findOne({ "identificacao.nif": "9677967710" });
 db.funcionarios.findOne({ id_sql: 1500 });
 
-// Exemplo Read(Busca em Embeddings): Encontrar funcionários que já trabalharam na empresa "Azevedo Lda."
+// Exemplo Read (Busca em Embeddings): Encontrar funcionários que já trabalharam na empresa "Tech Company"
 
-db.funcionarios.find({ 'historico_empresas.empresa' :'Tech Company'}, 
-  {"identificacao.nome_completo" :1, 'historico_empresas.$':1, _id:0});
+db.funcionarios.find(
+  { 'historico_empresas.empresa': 'Tech Company' }, 
+  { "identificacao.nome_completo": 1, 'historico_empresas.$': 1, _id: 0 }
+);
 
 // Exemplo de Update: Atualizar o email de um funcionário
 
 db.funcionarios.updateOne(
-  {
-  id_sql:1500
-  },
-{ $set:{'contactos.email': 'marco.casquilho@example.com'}}
+  { id_sql: 1500 },
+  { $set: { 'contactos.email': 'marco.casquilho@example.com' } }
 );
 
 // Exemplo de Delete: Remover um funcionário pelo ID
 
 db.funcionarios.deleteOne({ id_sql: 1500 });
-
+*/
