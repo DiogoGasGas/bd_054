@@ -750,3 +750,9 @@ db.funcionarios.updateOne(
 
 db.funcionarios.deleteOne({ id_sql: 1500 });
 */
+
+
+
+db.funcionarios.find({
+    "formacoes_realizadas.id_formacao_sql": 3
+}, { "identificacao.nome_completo": 1, _id: 0 }).explain("executionStats");
