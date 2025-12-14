@@ -3,18 +3,19 @@
 # Configuração da ligação
 $mongoUri = "mongodb://bd054:bd054@appserver.alunos.di.fc.ul.pt:27017/bd054?authSource=bd054"
 
-Write-Host "--- A INICIAR MIGRACAO TOTAL (6 COLECOES) ---" -ForegroundColor Cyan
+Write-Host "--- A INICIAR MIGRACAO TOTAL (7 COLECOES) ---" -ForegroundColor Cyan
 
 # ---------------------------------------------------------
 # 0. LIMPEZA INICIAL
 # (Apaga os ficheiros antigos um a um para garantir que não sobra lixo)
 # ---------------------------------------------------------
-if (Test-Path "Ficheiros Migracao/departamentos.json") { Remove-Item "Ficheiros Migracao/departamentos.json" }
-if (Test-Path "Ficheiros Migracao/formacoes.json")     { Remove-Item "Ficheiros Migracao/formacoes.json" }
-if (Test-Path "Ficheiros Migracao/candidatos.json")    { Remove-Item "Ficheiros Migracao/candidatos.json" }
-if (Test-Path "Ficheiros Migracao/avaliacoes.json")    { Remove-Item "Ficheiros Migracao/avaliacoes.json" }
-if (Test-Path "Ficheiros Migracao/vagas.json")         { Remove-Item "Ficheiros Migracao/vagas.json" }
-if (Test-Path "Ficheiros Migracao/funcionarios.json")  { Remove-Item "Ficheiros Migracao/funcionarios.json" }
+if (Test-Path "Ficheiros Migracao/formacoes.json")            { Remove-Item "Ficheiros Migracao/formacoes.json" }
+if (Test-Path "Ficheiros Migracao/candidatos.json")           { Remove-Item "Ficheiros Migracao/candidatos.json" }
+if (Test-Path "Ficheiros Migracao/avaliacoes.json")           { Remove-Item "Ficheiros Migracao/avaliacoes.json" }
+if (Test-Path "Ficheiros Migracao/vagas.json")                { Remove-Item "Ficheiros Migracao/vagas.json" }
+if (Test-Path "Ficheiros Migracao/historico_salarial.json")   { Remove-Item "Ficheiros Migracao/historico_salarial.json" }
+if (Test-Path "Ficheiros Migracao/ausencias.json")            { Remove-Item "Ficheiros Migracao/ausencias.json" }
+if (Test-Path "Ficheiros Migracao/funcionarios.json")         { Remove-Item "Ficheiros Migracao/funcionarios.json" }
 
 # ---------------------------------------------------------
 # 1. EXPORTAR (Postgres -> JSON)
@@ -29,12 +30,6 @@ psql -h appserver.alunos.di.fc.ul.pt -U bd054 -d bd054 -f exportar_dados.sql
 # (Executamos o comando de importação explicitamente para cada coleção)
 # ---------------------------------------------------------
 Write-Host "2. A importar para o MongoDB..."
-
-# --- Departamentos ---
-if (Test-Path "Ficheiros Migracao/departamentos.json") {
-    Write-Host "   -> Importar 'departamentos'..."
-    mongoimport --uri $mongoUri --collection departamentos --file "Ficheiros Migracao/departamentos.json" --drop
-}
 
 # --- Formacoes ---
 if (Test-Path "Ficheiros Migracao/formacoes.json") {
@@ -58,6 +53,18 @@ if (Test-Path "Ficheiros Migracao/avaliacoes.json") {
 if (Test-Path "Ficheiros Migracao/vagas.json") {
     Write-Host "   -> Importar 'vagas'..."
     mongoimport --uri $mongoUri --collection vagas --file "Ficheiros Migracao/vagas.json" --drop
+}
+
+# --- Historico Salarial ---
+if (Test-Path "Ficheiros Migracao/historico_salarial.json") {
+    Write-Host "   -> Importar 'historico_salarial'..."
+    mongoimport --uri $mongoUri --collection historico_salarial --file "Ficheiros Migracao/historico_salarial.json" --drop
+}
+
+# --- Ausencias (ferias + faltas) ---
+if (Test-Path "Ficheiros Migracao/ausencias.json") {
+    Write-Host "   -> Importar 'ausencias'..."
+    mongoimport --uri $mongoUri --collection ausencias --file "Ficheiros Migracao/ausencias.json" --drop
 }
 
 # --- Funcionarios ---
