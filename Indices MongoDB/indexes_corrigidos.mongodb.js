@@ -1,147 +1,144 @@
-// ===================================================================
-// ÍNDICES MONGODB - BD054 (CORRIGIDOS)
-// ===================================================================
-// Estratégia: Indexar campos usados em queries frequentes
-// Nota: _id já tem índice automático em todas as coleções
-// ===================================================================
+/**
+ * =================================================================================
+ * ÍNDICES MONGODB OTIMIZADOS - PROJETO DE MIGRAÇÃO
+ * =================================================================================
+ * Este script cria os índices necessários para suportar as 20 queries do projeto,
+ * focando-se em chaves estrangeiras (Lookups), ordenações (Sorts) e filtros frequentes.
+ */
 
+// =================================================================================
+// 1. COLEÇÃO 'FUNCIONARIOS' (A mais consultada)
+// =================================================================================
 
-// ===================================================================
-// COLEÇÃO: funcionarios
-// ===================================================================
+/**
+ * Índice: ID do Departamento
+ * Justificativa: Suporta as Queries 1, 3, 5, 15, 18 e 20.
+ * Explicação: Estas queries agrupam ($group) ou filtram funcionários por departamento.
+ * Sem este índice, o Mongo teria de varrer todos os funcionários (COLLSCAN) para os separar.
+ */
+db.funcionarios.createIndex({ "profissional.id_depart_sql": 1 });
 
-// 1. Queries por departamento (Query 1, 3, 5, 14, 15, 18, 20)
-// Usado para agrupar, filtrar e agregar por departamento
-db.funcionarios.createIndex({ "profissional.id_depart_sql": 1 })
+/**
+ * Índice: Data de Início do Salário (Ordem Decrescente)
+ * Justificativa: Suporta as Queries 3, 4, 15, 19 e 20.
+ * Explicação: Quase todas as queries financeiras começam por pedir o "salário mais recente".
+ * O índice {-1} permite ao Mongo encontrar o último salário instantaneamente sem ordenar em memória.
+ */
+db.funcionarios.createIndex({ "historico_salarial.inicio": -1 });
 
-// 2. Buscar salário mais recente (Query 3, 4, 15, 19, 20)
-// Usado para ordenar e pegar o último salário do array historico_salarial
-db.funcionarios.createIndex({ "historico_salarial.inicio": -1 })
+/**
+ * Índice: Tipo de Benefício
+ * Justificativa: Suporta as Queries 7 e 19.
+ * Explicação: Otimiza a busca por "Seguro Saúde" ou "Carro Empresa" dentro do array de benefícios.
+ */
+db.funcionarios.createIndex({ "historico_salarial.beneficios.tipo": 1 });
 
-// 3. Filtrar por tipo de benefício (Query 7, 19)
-// Usado para queries que procuram funcionários com benefícios específicos
-db.funcionarios.createIndex({ "historico_salarial.beneficios.tipo": 1 })
+/**
+ * Índice: Histórico de Empresas Anteriores
+ * Justificativa: Suporta a Query 19.
+ * Explicação: Permite encontrar rapidamente quem trabalhou numa empresa específica (ex: "Moura")
+ * sem ter de ler o histórico completo de toda a gente.
+ */
+db.funcionarios.createIndex({ "historico_empresas.empresa": 1 });
 
-// 4. Buscar por empresa anterior (Query 19)
-// Usado para encontrar funcionários que trabalharam em empresas específicas
-db.funcionarios.createIndex({ "historico_empresas.empresa": 1 })
+/**
+ * Índice: Estado das Férias
+ * Justificativa: Suporta a Query 8.
+ * Explicação: Acelera a filtragem de férias "Aprovadas", ignorando as Pendentes/Rejeitadas.
+ */
+db.funcionarios.createIndex({ "registo_ausencias.ferias.estado": 1 });
 
-// 5. Buscar por NIF (operações CRUD, autenticação, validações)
-// UNIQUE porque NIF é identificador único de cada funcionário
-db.funcionarios.createIndex({ "identificacao.nif": 1 }, { unique: true })
+/**
+ * Índice: Formações Realizadas (Multikey Index) -- ADICIONADO NOVO
+ * Justificativa: Suporta a Query 6 e Query 18.
+ * Explicação: Como 'formacoes_realizadas' é um array, este índice permite agrupar 
+ * ou filtrar eficientemente por ID de formação.
+ */
+db.funcionarios.createIndex({ "formacoes_realizadas.id_formacao_sql": 1 });
 
-// 6. Buscar por email (login, recuperação senha, contacto)
-// UNIQUE porque email não pode ser duplicado
-db.funcionarios.createIndex({ "contactos.email": 1 }, { unique: true })
-
-// 7. Buscar por id_sql (sincronização com PostgreSQL)
-// UNIQUE para manter integridade na sincronização entre sistemas
-db.funcionarios.createIndex({ "id_sql": 1 }, { unique: true })
-
-// 8. Queries de férias por estado (Query 8)
-// Usado para listar férias aprovadas, por aprovar, rejeitadas
-db.funcionarios.createIndex({ "registo_ausencias.ferias.estado": 1 })
-
-// 9. Índice composto: Departamento + Data salário (Query 20)
-// Otimiza queries que filtram por departamento E ordenam por data de salário
+/**
+ * Índice Composto: Departamento + Data Salário
+ * Justificativa: Otimização específica para a Query 20.
+ * Explicação: Esta query filtra pelo departamento E ordena pelo salário ao mesmo tempo.
+ * O índice composto cobre ambas as operações num único passo (ESR Rule: Equality, Sort, Range).
+ */
 db.funcionarios.createIndex({ 
   "profissional.id_depart_sql": 1, 
   "historico_salarial.inicio": -1 
-})
+});
 
-// 10. Índice composto: Empresa anterior + Data salário (Query 19)
-// Otimiza queries que filtram histórico de empresas E salário
-db.funcionarios.createIndex({ 
-  "historico_empresas.empresa": 1,
-  "historico_salarial.inicio": -1
-})
+// --- Índices de Integridade e Identificação ---
 
+// ID Original (SQL): Fundamental para todos os $lookup que ligam tabelas
+db.funcionarios.createIndex({ "id_sql": 1 }, { unique: true });
 
-// ===================================================================
-// COLEÇÃO: vagas
-// ===================================================================
+// NIF: Identificador único fiscal (Evita duplicados)
+db.funcionarios.createIndex({ "identificacao.nif": 1 }, { unique: true });
 
-// 11. Listar vagas por departamento (Query 11)
-// Usado para mostrar vagas abertas de um departamento específico
-db.vagas.createIndex({ "id_depart_sql": 1 })
-
-// 12. Filtrar vagas por estado (UI: vagas abertas/fechadas/canceladas)
-// Usado em listagens e dashboards
-db.vagas.createIndex({ "estado": 1 })
-
-// 13. Buscar por id_sql (sincronização PostgreSQL)
-db.vagas.createIndex({ "id_sql": 1 }, { unique: true })
-
-// 14. Queries sobre candidatos específicos em vagas
-// Usado para ver todas as vagas onde um candidato se candidatou
-db.vagas.createIndex({ "candidaturas_recebidas.id_candidato_sql": 1 })
-
-// 15. Queries sobre recrutadores
-// Usado para ver candidaturas geridas por um recrutador específico
-db.vagas.createIndex({ "candidaturas_recebidas.recrutador_id_sql": 1 })
+// Email: Usado para login ou pesquisa rápida de contactos
+db.funcionarios.createIndex({ "contactos.email": 1 }, { unique: true });
 
 
-// ===================================================================
-// COLEÇÃO: avaliacoes
-// ===================================================================
+// =================================================================================
+// 2. COLEÇÃO 'VAGAS'
+// =================================================================================
 
-// 16. Buscar avaliações de um funcionário (ordenadas por data)
-// Índice composto para otimizar query do histórico de avaliações
-db.avaliacoes.createIndex({ "avaliado_id_sql": 1, "data": -1 })
+/**
+ * Índice: Departamento da Vaga
+ * Justificativa: Suporta a Query 11.
+ * Explicação: Permite listar rapidamente todas as vagas de um departamento específico.
+ */
+db.vagas.createIndex({ "id_depart_sql": 1 });
 
-// 17. Buscar avaliações feitas por um avaliador
-// Usado para ver todas as avaliações que um gestor fez
-db.avaliacoes.createIndex({ "avaliador_id_sql": 1 })
+/**
+ * Índice: Estado da Vaga
+ * Justificativa: Filtro de UI (Dashboard).
+ * Explicação: Permite mostrar apenas vagas "Abertas" aos candidatos, escondendo as "Fechadas".
+ */
+db.vagas.createIndex({ "estado": 1 });
 
+/**
+ * Índice: Candidato (Dentro do array de candidaturas)
+ * Justificativa: Histórico do Candidato.
+ * Explicação: Permite saber rapidamente a que vagas o candidato X se candidatou.
+ */
+db.vagas.createIndex({ "candidaturas_recebidas.id_candidato_sql": 1 });
 
-// ===================================================================
-// COLEÇÃO: candidatos
-// ===================================================================
-
-// 18. Buscar por id_sql (sincronização PostgreSQL)
-db.candidatos.createIndex({ "id_sql": 1 }, { unique: true })
-
-// 19. Buscar candidato por email (contacto, evitar duplicados)
-db.candidatos.createIndex({ "contactos.email": 1 })
-
-
-// ===================================================================
-// COLEÇÃO: formacoes
-// ===================================================================
-
-// 20. Buscar por id_sql (sincronização PostgreSQL)
-db.formacoes.createIndex({ "id_sql": 1 }, { unique: true })
-
-// 21. Filtrar formações por estado (ativas/concluídas/canceladas)
-// Usado para mostrar apenas formações disponíveis
-db.formacoes.createIndex({ "estado": 1 })
+// ID Original
+db.vagas.createIndex({ "id_sql": 1 }, { unique: true });
 
 
-// ===================================================================
-// COLEÇÃO: departamentos
-// ===================================================================
+// =================================================================================
+// 3. COLEÇÃO 'AVALIACOES'
+// =================================================================================
 
-// 22. Buscar por id_sql (sincronização PostgreSQL)
-db.departamentos.createIndex({ "id_sql": 1 }, { unique: true })
+/**
+ * Índice Composto: Avaliado + Data
+ * Justificativa: Histórico de Performance.
+ * Explicação: Permite recuperar as avaliações de um funcionário ordenadas da mais recente para a mais antiga.
+ */
+db.avaliacoes.createIndex({ "avaliado_id_sql": 1, "data": -1 });
 
-// 23. Buscar departamentos geridos por um funcionário específico
-// Usado para validações e queries de gestão
-db.departamentos.createIndex({ "id_gerente_sql": 1 })
+// ID Original (Não tem id_sql próprio na coleção, usa-se composto ou o _id automático)
+// (Neste caso assumimos que as pesquisas são por quem foi avaliado)
 
 
-// ===================================================================
-// SCRIPT PARA REMOVER ÍNDICES (usar se necessário refazer)
-// ===================================================================
-/*
-// ATENÇÃO: Isto remove TODOS os índices exceto _id
-// Use apenas se precisar recriar os índices do zero
+// =================================================================================
+// 4. COLEÇÃO 'CANDIDATOS'
+// =================================================================================
 
-db.funcionarios.dropIndexes()
-db.vagas.dropIndexes()
-db.avaliacoes.dropIndexes()
-db.candidatos.dropIndexes()
-db.formacoes.dropIndexes()
-db.departamentos.dropIndexes()
+// Email: Evitar que o mesmo candidato se registe duas vezes
+db.candidatos.createIndex({ "contactos.email": 1 }, { unique: true });
 
-// Depois execute os createIndex acima novamente
-*/
+// ID Original
+db.candidatos.createIndex({ "id_sql": 1 }, { unique: true });
+
+
+// =================================================================================
+// 5. COLEÇÃO 'FORMACOES' & 'DEPARTAMENTOS' (Tabelas de Referência)
+// =================================================================================
+
+// IDs Originais: Essenciais para que os $lookup (JOINS) das queries principais funcionem.
+// Sem isto, cada $lookup faria um scan completo nestas coleções.
+db.formacoes.createIndex({ "id_sql": 1 }, { unique: true });
+db.departamentos.createIndex({ "id_sql": 1 }, { unique: true });
