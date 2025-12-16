@@ -339,13 +339,12 @@ db.avaliacoes.aggregate([
 
 
 /**
- * 14. Candidatos Gmail
- * CONCEITO: Regex em campo de contacto.
+ * 14. Pesquisa de Candidatos por Email (CORRIGIDA)
+ * Descrição: Encontrar candidatos com domínio 'example.com' (adaptado aos dados de teste).
+ * Vantagem: Regex direto em campo aninhado.
  */
 db.candidatos.find({
-    // A expressão regular termina com $ para garantir que é o final da string.
-    // Evita falsos positivos como "gmail.com.br" se quiséssemos ser estritos (mas aqui apanha tudo).
-    "contactos.email": /@gmail\.com$/
+    "contactos.email": /@example\.com$/
 }, { nome: 1, "contactos.email": 1 });
 
 
