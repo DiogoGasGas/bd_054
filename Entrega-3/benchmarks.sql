@@ -1280,6 +1280,304 @@ ORDER BY
         ELSE 4
     END;
 
+--=================================================================================
+-- ANALISE SOBRE OPERACOES INEFICIENTES NAS QUERIES
+-- ================================================================================
+
+-- Nesta seccao vamos analisar as queries que potencialmente apresentam problemas de engarrafamentos, o critério para a
+-- selecao destas queries pode ser baseado nos resultados dos benchmarks anteriores, ou na existência de subqueries
+-- correlacionadas, joins complexos, ou outras características que possam impactar o desempenho.
+
+-- Query Selecionada: Q15 antes de índices e otimizacoes
+SET search_path TO bd054_schema, public;
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+
+SELECT d.Nome, COUNT(f.ID_fun) AS Numero_Funcionarios,
+AVG(s.salario_bruto) AS Media_Salarial_Departamento
+FROM departamentos AS d
+-- LEFT JOIN: Associa funcionários aos departamentos.
+LEFT JOIN funcionarios AS f 
+ON d.ID_depart = f.ID_depart
+-- LEFT JOIN: Obtém o salário bruto para calcular as médias.
+LEFT JOIN salario AS s 
+ON f.ID_fun = s.ID_fun
+WHERE s.Data_inicio = (    -- Filtro 1: Garante que só usamos o salário mais recente de CADA funcionário
+SELECT MAX(s2.Data_inicio) 
+FROM Salario s2 
+WHERE s2.ID_fun = f.ID_fun
+)
+GROUP BY d.Nome
+HAVING AVG(s.salario_bruto) > (    -- Filtro 2: Compara a média do departamento
+SELECT AVG(s_avg.salario_bruto) -- Subquery para a Média Global dos salários atuais
+FROM Salario s_avg
+WHERE s_avg.Data_inicio = (
+SELECT MAX(s_max.Data_inicio)
+FROM Salario s_max
+WHERE s_max.ID_fun = s_avg.ID_fun )
+)
+ORDER BY Media_Salarial_Departamento DESC;
+
+
+/*
+-- ANÁLISE DE PERFORMANCE (EXPLAIN ANALYZE) --
+--------------------------------------------------------------------------------------
+O plano de execução evidencia problemas de performance crítica, os gargalos, causados 
+pelo uso de Subqueries Correlacionadas, que forçam um processamento iterativo:
+
+1. SubPlan 2 - Filtro WHERE - Data Recente:
+   - Comportamento: Executado 2002 loops.
+   - Problema: Para cada linha resultante da junção Funcionários-Salários, o motor teve 
+     de parar e executar uma nova pesquisa para encontrar a data máxima desse funcionário.
+
+2. SubPlan 4 - Filtro HAVING - Média Global:
+   - Comportamento: 2266 loops.
+   - Problema: Para filtrar os departamentos, o motor revalidou linha a linha quais os 
+     registos a incluir no cálculo da média global, impedindo uma leitura única.
+
+CONCLUSÃO: 
+Os elevados tempos de CPU e 'buffers hit' resultam da complexidade O(N*M) destas subqueries. 
+O motor não conseguiu resolver os dados em lote, sendo forçado a operar 
+linha-a-linha, o que degrada severamente a escalabilidade.
+--------------------------------------------------------------------------------------
+*/
+
+-- ===============================================================================================================================
+
+
+
+-- Query Selecionada: Q19 antes de índices e otimizacoes
+SET search_path TO bd054_schema, public;
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT
+    DISTINCT -- Previne duplicados se o funcionário trabalhou na 'Moura' 2x
+    f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+    s.salario_bruto AS salario_atual,
+    b.tipo AS tipo_beneficio,
+    h.nome_empresa AS trabalhou_em -- Esta coluna será sempre 'Moura'
+FROM 
+    funcionarios AS f
+
+-- 1. Encontra o PERÍODO DE REMUNERAÇÃO MAIS RECENTE, assumindo que num funcionamento normal de uma empresa, o salário mais alto seja o mais recente
+-- JOIN: Determina a data de início da remuneração mais recente para sincronizar salário e benefícios.
+JOIN remuneracoes AS r 
+    ON f.id_fun = r.id_fun
+    AND r.Data_inicio = (
+        SELECT MAX(r2.Data_inicio) 
+        FROM remuneracoes r2 
+        WHERE r2.id_fun = f.id_fun
+    )
+
+-- 2. Verifica o SALÁRIO para ESSE período
+-- JOIN: Acede ao valor do salário bruto correspondente ao período identificado.
+JOIN salario AS s 
+    ON r.id_fun = s.id_fun 
+    AND r.Data_inicio = s.Data_inicio -- Garante que é do período recente
+    AND s.salario_bruto > 1500        -- Aplica o filtro do salário
+
+-- 3. Verifica o BENEFÍCIO para ESSE período
+-- JOIN: Verifica se existe o benefício 'Seguro Saúde' associado ao mesmo período.
+JOIN beneficios AS b
+    ON r.id_fun = b.id_fun 
+    AND r.Data_inicio = b.Data_inicio -- Garante que é do período recente
+    AND b.tipo = 'Seguro Saúde'       -- Aplica o filtro do benefício
+
+-- 4. Verifica o HISTÓRICO (em qualquer altura)
+-- JOIN: Filtra os funcionários que têm registo histórico na empresa 'Moura'.
+JOIN historico_empresas AS h 
+    ON f.id_fun = h.id_fun 
+    AND h.nome_empresa = 'Moura';
+
+/*
+-- ANÁLISE DE PERFORMANCE (EXPLAIN ANALYZE) --
+--------------------------------------------------------------------------------------
+Esta query apresenta uma performance excelente devido a uma estratégia de 
+filtragem eficaz, apesar de manter custos estruturais:
+
+1. Estratégia de Execução - Nested Loops:
+   - O otimizador escolheu a tabela 'historico_empresas' como ponto de partida , filtrando imediatamente por 'Moura'.
+   - Isto reduziu o universo de análise de ~2500 registos para apenas 11, tornando 
+     os passos seguintes, Join com Salário e Benefícios, triviais.
+
+2. SubPlan 2 - Data Recente:
+   - A subquery correlacionada para encontrar a data máxima ainda existe.
+   - Contudo, foi executada apenas 7 vezes (loops=7) devido ao filtro inicial eficaz. 
+     (Nota: Em grande escala, isto continuaria a ser um risco de performance).
+
+3. Nó 'Unique' e 'Sort':
+   - Responsáveis pela cláusula DISTINCT. O custo é residual (0.8ms) dado o baixo 
+     número de linhas finais, 4 rows.
+
+CONCLUSÃO:
+Exemplo de como um filtro seletivo (WHERE nome_empresa = 'Moura') pode mitigar 
+ineficiências estruturais de subqueries, permitindo 'Nested Loops' muito rápidos.
+--------------------------------------------------------------------------------------
+*/
+
+--============================================================================================
+
+-- Query Selecionada: Q20 antes de índices e otimizacoes
+SET search_path TO bd054_schema, public;
+
+
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT f.id_fun, f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+sal.salario_bruto AS salario_atual,
+d.nome AS nome_departamento,
+(SELECT COUNT(*) -- subquery para contar formações 
+FROM teve_formacao AS teve
+WHERE teve.id_fun = f.id_fun
+  ) AS num_formacoes
+FROM funcionarios AS f 
+-- LEFT JOIN: Obtém o nome do departamento do funcionário.
+LEFT JOIN departamentos AS d ON f.id_depart = d.id_depart
+-- LEFT JOIN: Obtém o salário bruto atual do funcionário.
+LEFT JOIN salario AS sal ON f.id_fun = sal.id_fun
+WHERE sal.Data_inicio = (   -- Garante que só vemos o salário mais recente do funcionário
+SELECT MAX(s_main.Data_inicio)
+FROM salario s_main
+WHERE s_main.id_fun = f.id_fun
+    )
+AND sal.salario_bruto > ( -- Compara esse salário com a MÉDIA ATUAL do departamento
+SELECT AVG(s2.salario_bruto) 
+FROM funcionarios AS f2 
+-- LEFT JOIN (subquery): Junta os salários dos colegas do mesmo departamento para calcular a média.
+LEFT JOIN salario AS s2 ON f2.id_fun = s2.id_fun
+WHERE f2.id_depart = f.id_depart -- Do mesmo departamento
+AND s2.Data_inicio = ( -- E que o salário (s2) seja o mais recente desse funcionário (f2), assume-se que a tendência natural é o maior salário ser sempre o mais recente
+SELECT MAX(s3.Data_inicio)
+FROM salario s3
+WHERE s3.id_fun = f2.id_fun
+    )
+)
+ORDER BY nome_departamento, salario_atual DESC;
+
+/*
+-- ANÁLISE DE PERFORMANCE (EXPLAIN ANALYZE) --
+--------------------------------------------------------------------------------------
+Esta query apresenta o pior desempenho do conjunto (~757ms), sofrendo de graves 
+ineficiências estruturais que criam "gargalos" de processamento massivos:
+
+1. O Principal Gargalo - SubPlan 6 - Média por Departamento:
+   - Comportamento: Executado 1000 vezes.
+   - Impacto: O motor recalcula a média do departamento inteiro para cada funcionário 
+     individualmente. Isto cria uma redundância de cálculo desnecessária que bloqueia 
+     o fluxo de execução principal.
+
+2. O Engarrafamento de I/O - SubPlan 5 - Data Recente:
+   - Comportamento: 250.668 loops!
+   - Análise: Estamos perante um "engarrafamento" lógico. Para calcular a média no 
+     ponto anterior, o motor tem de verificar a data do salário de cada colega, um a um. 
+     Isto gerou mais de 530.000 acessos à memória os buffers shared hit, saturando o CPU.
+
+3. Seq Scans e Hash Joins Repetitivos:
+   - Embora existam índices, a lógica da query força Hash Joins repetidos sobre a tabela 
+     de funcionários dentro do SubPlan 6. Isto equivale a scans lógicos 
+     desnecessários que poderiam ser evitados se os dados fossem processados em lote.
+
+CONCLUSÃO:
+A query escala de forma exponencial O(N^2). O uso excessivo de subqueries correlacionadas 
+transformou uma operação simples num congestionamento de mais de 250 mil operações de 
+leitura.
+--------------------------------------------------------------------------------------
+*/
+--=====================================================================================================
+
+-- Query Selecionada: Q06 antes de índices e otimizacoes
+
+SET search_path TO bd054_schema, public;
+
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT
+  f.id_for,
+  f.nome_formacao,
+  calcular_num_aderentes_formacao(f.id_for) AS num_aderentes
+FROM formacoes AS f
+-- compara cada formação com a média global de aderentes (subquery calcula essa média)
+WHERE calcular_num_aderentes_formacao(f.id_for) >(
+  SELECT AVG(calcular_num_aderentes_formacao(id_for)) 
+  FROM formacoes
+)
+ORDER BY calcular_num_aderentes_formacao(f.id_for) DESC;
+
+/* -- ANÁLISE DE PERFORMANCE (EXPLAIN ANALYZE) --
+--------------------------------------------------------------------------------------
+Esta query demonstra o "Anti-Pattern" de funções escalares no WHERE e no SELECT, 
+causando um problema de performance latente (uma "bomba relógio"):
+
+1. Troca de Contexto Excessivo:
+   - O plano mostra 'Buffers: shared hit=80' apenas para processar 5 linhas!
+   - Motivo: Para CADA linha da tabela 'formacoes', o motor SQL tem de "parar", 
+     chamar o motor PL/pgSQL para correr a função 'calcular_num_aderentes_formacao', 
+     e esperar pelo resultado.
+   - Embora o tempo total seja baixo (2.9ms) agora, isto deve-se apenas ao volume 
+     de dados ser ínfimo. O custo proporcional é altíssimo.
+
+2. InitPlan Pesado - Duplicação de Esforço:
+   - Para calcular a média global (InitPlan 1), a função foi executada para 
+     todas as 5 formações.
+   - Depois, foi executada NOVAMENTE no 'Seq Scan' principal para filtrar quem 
+     estava acima dessa média.
+   - Finalmente, é chamada no Output para mostrar o valor.
+   - Total estimado de chamadas da função: 5 (média) + 5 (filtro) + 2 (output) = 12 chamadas 
+     para mostrar apenas 2 linhas de resultado!
+
+CONCLUSÃO:
+O uso de funções no WHERE impede o otimizador de usar estatísticas globais e força 
+um processamento linha a linha.
+--------------------------------------------------------------------------------------
+*/
+
+-- =====================================================================================================
+
+-- Query Selecionada: Q02 antes de índices e otimizacoes
+SET search_path to bd054_schema, public;
+
+
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+SELECT
+f.primeiro_nome || ' ' || f.ultimo_nome AS nome_completo,
+s.salario_bruto AS salario_bruto
+FROM
+funcionarios f
+-- LEFT JOIN: Acede à tabela de salários para obter o valor bruto correspondente a cada funcionário.
+LEFT JOIN salario s ON f.ID_fun = s.ID_fun
+WHERE s.salario_bruto > (      -- Filtro 1: O salário tem de ser maior que a média global
+SELECT AVG(salario_bruto) 
+FROM salario 
+)                          -- Filtro 2: "Olha só para o registo mais recente deste funcionário"
+AND s.Data_inicio = (
+SELECT MAX(s2.Data_inicio)
+FROM salario s2
+WHERE s2.ID_fun = f.ID_fun 
+)
+ORDER BY
+salario_bruto DESC;
+
+/* -- ANÁLISE DE PERFORMANCE (EXPLAIN ANALYZE) --
+--------------------------------------------------------------------------------------
+Esta query apresenta um padrão perigoso de "N+1 Queries" executado internamente 
+pela base de dados, disfarçado dentro de um Hash Join.
+
+1. O Gargalo Oculto : SubPlan 3 - 1493 Loops:
+   - O plano indica 'Loops=1493' no SubPlan 3.
+   - O que isto significa: Para CADA combinação possível de funcionário e salário 
+     que passou no filtro inicial, o Postgres foi obrigado a executar uma pequena 
+     query extra para descobrir "qual é a data mais recente?".
+   - Custo: Gerou mais de 3.000 acessos à memória, os shared hits, num passo que 
+     deveria ser linear.
+
+2. A Condição de Join Ineficiente:
+   - Hash Cond: ((s.id_fun = f.id_fun) AND (s.data_inicio = (SubPlan 3)))
+   - O problema está no "AND s.data_inicio = (SubPlan 3)".
+   - Em vez de preparar os dados "mais recentes" de antemão, a query está a 
+     verificar a validade da data linha a linha durante o cruzamento das tabelas.
+
+CONCLUSÃO:
+A query escala mal. Se a tabela de salários crescer para 1 milhão de linhas, 
+o SubPlan 3 será executado milhões de vezes, matando a performance.
+--------------------------------------------------------------------------------------
+*/
+
 
 -- ================================================================================
 -- PARA LIMPAR OS RESULTADOS DOS BENCHMARKS
