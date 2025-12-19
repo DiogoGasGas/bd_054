@@ -240,7 +240,7 @@ db.createCollection("vagas", {
         _id: { bsonType: "objectId" },
         id_sql: { bsonType: "int" },
         data_abertura: { bsonType: "string" },
-        estado: { bsonType: "string" }, // Ex: Aberta, Preenchida
+        estado: { bsonType: "string" }, // Ex: Aberta, Preenchida 
         id_depart_sql: { bsonType: "int" },
         requisitos: { bsonType: "array", items: { bsonType: "string" } },
         candidaturas_recebidas: {
