@@ -3,14 +3,15 @@
 -- Nessa tabela vamos inserir os resultados antes de criar os indices, depois de criar índices, e depois de criar os indices e otimizar as queries
 -- ===================================================================================================================================================
 
+set search_path to bd054_schema, public;
 
+-- Caso a tabela já exista, removemo-la para evitar conflitos
+DROP TABLE IF EXISTS benchmark_results;
 
-set search_path to benchmark_schema, public;
 -- CORRER ANTES DE CRIAR ÍNDICES E OTIMIZAÇÕES
 -- primeiro de tudo, cria se uma tabela para armazenar os resultados do benchmark
  
-
-CREATE TABLE benchmark_results (
+CREATE TABLE IF NOT EXISTS benchmark_results (
     id SERIAL PRIMARY KEY,
     query_name TEXT,
     etapa TEXT,                   -- 'antes' ou 'depois'
@@ -141,7 +142,7 @@ ANALYZE permissoes;
 -- ====================================================================
 
 
-set search_path to benchmark_schema, public;
+set search_path to bd054_schema, public;
 
 DO $$
 BEGIN
@@ -652,7 +653,7 @@ ANALYZE utilizadores;
 ANALYZE permissoes;
 
 
-set search_path to benchmark_schema, public;
+set search_path to bd054_schema, public;
 
 DO $$
 BEGIN
@@ -1257,8 +1258,6 @@ END $$;
 -- PARA VER O RESULTADOS DOS BENCHMARKS
 -- ================================================================================
 
-SELECT * FROM benchmark_results;
-
 
 SELECT 
     query_name,
@@ -1583,7 +1582,6 @@ o SubPlan 3 será executado milhões de vezes, matando a performance.
 -- PARA LIMPAR OS RESULTADOS DOS BENCHMARKS
 -- ================================================================================
 
-set search_path to benchmark_schema, public;
+set search_path to bd054_schema, public;
 
-DROP TABLE IF EXISTS benchmark_results; 
-
+DROP TABLE IF EXISTS benchmark_results;
