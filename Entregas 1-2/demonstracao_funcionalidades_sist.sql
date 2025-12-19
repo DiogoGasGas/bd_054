@@ -1,25 +1,18 @@
 set search_path TO bd054_schema, public;
 BEGIN;
 -- ============================================================
--- DEMONSTRAÇÃO DE FUNCIONALIDADES DO SISTEMA
--- Sistema de Gestão de Recursos Humanos
+-- Demonstração de Funcionalidades do Sistema 
+-- Objetivo: Mostrar operações CRUD e outras ações ligadas aos requisitos funcionais
+-- e casos de uso da entrega 1 e demonstrar como funcionam.
 -- ============================================================
 
-
 -- ============================================================
--- CENÁRIO 1: Admissão de um novo funcionário
--- Demonstra:
---  - Inserção de funcionário
---  - Validação da idade mínima (trigger)
---  - Criação automática de utilizador (trigger)
---  - Integridade referencial com departamentos
+-- CENÁRIO 1: Registo de Funcionário
+-- RF: 1, 2
+-- CU: 5.1 - Registo de Funcionário
 -- ============================================================
 
--- Inserir um departamento (Não funciona porque já existe um departamento com id 1)
-INSERT INTO departamentos (id_depart, nome)
-VALUES (1, 'Tecnologia da Informação');
-
--- Inserir um novo funcionário válido
+-- Inserir um novo funcionário
 INSERT INTO funcionarios (
     id_fun, nif, primeiro_nome, ultimo_nome,
     data_nascimento, cargo, id_depart
@@ -29,20 +22,21 @@ VALUES (
     '1995-04-10', 'Programadora', 1
 );
 
--- Verificar que o funcionário foi inserido
+-- Verificar que o funcionário foi inserido (CRUD - Read)
 SELECT * FROM funcionarios WHERE id_fun = 1111;
 
--- Verificar que o utilizador foi criado automaticamente
--- (trigger trg_cria_utilizador)
+-- Verificar criação automática de utilizador (trigger)
 SELECT * FROM utilizadores WHERE id_fun = 1111;
 
+-- Explicação:
+-- O INSERT representa o registo de funcionário (RF1, CU5.1)
+-- O SELECT confirma o registo
+-- A trigger cria_utilizador representa a criação automática de credenciais (RF2)
 
 -- ============================================================
--- CENÁRIO 2: Gestão salarial do funcionário
--- Demonstra:
---  - Inserção de remuneração
---  - Cálculo automático do salário líquido (trigger)
---  - Uso de função de descontos
+-- CENÁRIO 2: Gestão Salarial
+-- RF: 12, 13
+-- CU: Atualizar Dados de Funcionário / Consultar Benefícios
 -- ============================================================
 
 -- Criar período de remuneração
@@ -52,31 +46,32 @@ VALUES (1111, '2025-01-01', NULL);
 -- Inserir salário bruto
 INSERT INTO salario (id_fun, data_inicio, salario_bruto)
 VALUES (1111, '2025-01-01', 2000);
--- Verificar cálculo automático do salário líquido
+
+-- Verificar cálculo automático do salário líquido (trigger)
 SELECT salario_bruto, salario_liquido
 FROM salario
 WHERE id_fun = 1111;
 
-SELECT * FROM remuneracoes WHERE id_fun = 1111;
+-- Explicação:
+-- Inserção em remuneracoes e salario representa atualização de salário (RF12)
+-- Trigger calc_salario_liquido calcula o líquido automaticamente, cumprindo regras de negócio (RF13)
 
 -- ============================================================
--- CENÁRIO 3: Pedido e aprovação de férias
--- Demonstra:
---  - Cálculo automático do número de dias de férias
---  - Validação do limite de dias permitidos
---  - Aprovação de férias via procedure
+-- CENÁRIO 3: Pedido e Aprovação de Férias
+-- RF: 9, 10
+-- CU: 5.3 - Registar Férias e Ausências
 -- ============================================================
 
 -- Funcionário submete pedido de férias
 INSERT INTO ferias (id_fun, data_inicio, data_fim)
 VALUES (1111, '2025-07-01', '2025-07-10');
 
--- Verificar que o número de dias foi calculado automaticamente
+-- Verificar número de dias calculado automaticamente
 SELECT id_fun, data_inicio, data_fim, num_dias, estado_aprov
 FROM ferias
 WHERE id_fun = 1111;
 
--- Aprovar férias usando procedimento armazenado
+-- Aprovar férias via procedimento armazenado
 CALL aprovar_ferias_proc(1111, '2025-07-01');
 
 -- Confirmar aprovação
@@ -84,16 +79,18 @@ SELECT estado_aprov
 FROM ferias
 WHERE id_fun = 1111 AND data_inicio = '2025-07-01';
 
-
+-- Explicação:
+-- INSERT registra pedido de férias (RF9, CU5.3)
+-- Trigger calcula num_dias automaticamente
+-- CALL aprovar_ferias_proc representa aprovação pelo administrador (RF10)
 
 -- ============================================================
--- CENÁRIO 4: Gestão de dependentes
--- Demonstra:
---  - Inserção de dependente válida
---  - Validação de coerência de datas (trigger)
+-- CENÁRIO 4: Gestão de Dependentes
+-- RF: 20
+-- CU: 5.8 - Registar Dependentes
 -- ============================================================
 
--- Inserir dependente válido (filho mais novo que o funcionário)
+-- Inserir dependente válido
 INSERT INTO dependentes (
     id_fun, nome, sexo, data_nascimento, parentesco
 )
@@ -104,16 +101,17 @@ VALUES (
 -- Consultar dependentes do funcionário
 SELECT * FROM dependentes WHERE id_fun = 1111;
 
+-- Explicação:
+-- INSERT cumpre RF20 ao registar dependente
+-- Trigger validar_datas_dependentes assegura integridade de datas (CU5.8)
 
 -- ============================================================
--- CENÁRIO 5: Formação e aderência de funcionários
--- Demonstra:
---  - Inserção de formação
---  - Associação funcionário-formação
---  - Uso de função para contar aderentes
+-- CENÁRIO 5: Formação de Funcionários
+-- RF: 17, 18
+-- CU: Associar Funcionário a Formação
 -- ============================================================
 
--- Criar uma formação
+-- Criar formação
 INSERT INTO formacoes (
     id_for, nome_formacao, descricao, data_inicio, data_fim, estado
 )
@@ -126,24 +124,24 @@ VALUES (
 INSERT INTO teve_formacao (id_fun, id_for, data_inicio, data_fim)
 VALUES (1111, 10, '2025-03-01', '2025-03-15');
 
--- Ver número de aderentes à formação
+-- Consultar número de aderentes
 SELECT calcular_num_aderentes_formacao(10);
 
--- Ver detalhes da formação
-select * from formacoes where id_for = 10; 
+-- Explicação:
+-- INSERT em formacoes representa criação de curso
+-- INSERT em teve_formacao representa associação de funcionário a formação (RF17, CU)
+-- Função calcular_num_aderentes_formacao cumpre RF18
 
--- Verificar associação funcionário-formação
-select * from teve_formacao where id_fun = 1111; 
 -- ============================================================
--- CENÁRIO 6: Relatórios e views
--- Demonstra:
---  - Uso e verificação de funcionamento de views 
+-- CENÁRIO 6: Consultas e Relatórios
+-- RF: 4, 5, 8
+-- CU: Consultar Benefícios / Consultar Funcionários
 -- ============================================================
 
--- Ver remuneração completa (salário + benefícios)
+-- Ver remuneração completa
 SELECT * FROM vw_remun_completa;
 
--- Ver funcionários e respetivos departamentos
+-- Ver funcionários e departamentos
 SELECT * FROM vw_funcionarios_departamentos;
 
 -- Ver férias aprovadas
@@ -152,9 +150,16 @@ SELECT * FROM vw_ferias_aprovadas;
 -- Ver média salarial por departamento
 SELECT * FROM vw_media_salarial_departamento;
 
--- Ver estatísticas globais do sistema
+-- Ver estatísticas globais
 SELECT * FROM vw_estatisticas_gerais;
+
+-- Explicação:
+-- Views permitem consultas consolidadas, alinhadas com RF4, RF5, RF8
+-- Representam casos de uso de consulta de funcionários e benefícios
+
 
 
 
 ROLLBACK;
+
+
